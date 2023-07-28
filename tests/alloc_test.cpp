@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "boltdb/alloc/memory_pool.hpp"
+#include "boltdb/util/slice.hpp"
 
 using namespace boltdb;
 

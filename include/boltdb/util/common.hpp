@@ -4,7 +4,7 @@
 namespace boltdb {
 
 // TODO(gc): why not use std::byte
-using Byte = unsigned char;
+using Byte = char;
 
 #define DISALLOW_COPY(Typename) \
   Typename(const Typename&);    \
