@@ -6,9 +6,15 @@ namespace boltdb {
 // TODO(gc): why not use std::byte
 using Byte = char;
 
-#define DISALLOW_COPY(Typename) \
-  Typename(const Typename&);    \
+#define DISALLOW_COPY(Typename)      \
+  Typename(const Typename&); \
   void operator=(const Typename&)
+
+#define DISALLOW_MOVE(Typename) \
+  Typename(const Typename&&);   \
+  void operator=(const Typename&&)
+
+#define UNUSED_VAR(var) ((void)(var))
 
 }  // namespace boltdb
 

@@ -4,19 +4,29 @@ using namespace boltdb;
 
 RefCount::RefCount() : _count(new int(1)) {}
 
-RefCount::RefCount(RefCount& other);
-RefCount::RefCount& operator=(RefCount& other);
-RefCount::RefCount(RefCount&& other);
-RefCount::RefCount&& operator=(RefCount&& other);
+RefCount::RefCount(const RefCount& other) { copy(other); }
 
-void RefCount::copy(RefCount& other) {
-	_count = other._count;
+RefCount& RefCount::operator=(const RefCount& other) {
+  if (this == &other) {
+    return *this;
+  }
 
-	if (_count) {
-		*_count++;
-	}
+  release();
+  copy(other);
+
+  return *this;
 }
 
-void RefCount::move(RefCount& other) {
+RefCount::~RefCount() { release(); }
 
+void RefCount::release() {
+  if (_count && --*_count == 0) {
+    delete _count;
+    _count = nullptr;
+  }
+}
+
+void RefCount::copy(const RefCount& other) {
+  _count = other._count;
+  *_count = *_count + 1;
 }

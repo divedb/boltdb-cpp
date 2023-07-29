@@ -1,1 +1,1 @@
-add_library(util slice.cpp)
+add_library(util slice.cpp ref_count.cpp)

@@ -1,33 +1,33 @@
 #ifndef BOLTDB_CPP_UTIL_REF_COUNT_HPP_
 #define BOLTDB_CPP_UTIL_REF_COUNT_HPP_
 
+#include "boltdb/util/common.hpp"
+
 namespace boltdb {
 
 class RefCount {
  public:
   RefCount();
-  RefCount(RefCount& other);
-  RefCount& operator=(RefCount& other);
-  RefCount(RefCount&& other);
-  RefCount&& operator=(RefCount&& other);
+  RefCount(const RefCount& other);
+  RefCount& operator=(const RefCount& other);
 
   ~RefCount();
 
-  // Get the reference count.
-  // Note that: 0 reference count is allowed when this only object is moved.
-  int ref_count() const {
-    if (!_count) {
-      return 0;
-    }
+  // Check if the object has a unique reference.
+  bool unique() const { return _count && *_count == 1; }
 
-    return *_count;
-  }
+  // Get the number of references to the object.
+  int count() const { return *_count; }
+
+  // Releases the ownership of the managed object.
+  void release();
 
  private:
-  void copy(RefCount& other);
-  void move(RefCount& other);
+  DISALLOW_MOVE(RefCount);
 
-  int* _count;
+  void copy(const RefCount& other);
+
+  mutable int* _count;
 };
 
 }  // namespace boltdb

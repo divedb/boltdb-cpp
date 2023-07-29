@@ -77,10 +77,11 @@ TEST_CASE("Move constructor and assignment", "[Byte Slice]") {
   ByteSlice slice1(str1);
   ByteSlice slice2(std::move(slice1));
 
-  REQUIRE(bool(slice1) == false);
-  REQUIRE(slice1.ref_count() == 0);
-  REQUIRE(slice1.to_string() == "");
+  // Move works same with copy.
+  // TODO(gc): this may depend on the performance test
+  REQUIRE(slice1.ref_count() == 2);
+  REQUIRE(slice1.to_string() == str1);
 
-  REQUIRE(slice2.ref_count() == 1);
+  REQUIRE(slice2.ref_count() == 2);
   REQUIRE(slice2.to_string() == str1);
 }
