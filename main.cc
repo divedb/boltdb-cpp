@@ -1,20 +1,13 @@
-#include <cstddef>
-#include <ios>
+#include <cstdio>
 #include <iostream>
 
-using namespace std;
+int main() {
+  int num = 42;
+  char buf[128];
 
-int main(int argc, char** argv) {
-  byte a{1};
-  byte b{2};
+  int res = snprintf(buf, sizeof(buf), "%02x", num);
 
-  cout << int(a & b) << endl;
-  cout << int(a | b) << endl;
-  cout << int(~a) << endl;
-  cout << int(a ^ b) << endl;
-  cout << int(a << 1) << endl;
-  cout << int(a << 16) << endl;
-  cout << int(a >> 1) << endl;
+  printf("buf = %s\n", buf);
 
   return 0;
 }

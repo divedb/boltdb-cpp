@@ -2,6 +2,9 @@
 #define BOLTDB_CPP_UTIL_HPP_
 
 #include <cassert>
+#include <cstdarg>
+#include <cstdlib>
+#include <string>
 
 namespace boltdb {
 
@@ -22,6 +25,18 @@ constexpr static inline int round_up_to_power_of_two(int x) {
   x++;
 
   return x;
+}
+
+// A simple implementation of format.
+std::string format(const char* fmt, ...) {
+  static char buf[1024];
+
+  va_list args;
+  va_start(args, fmt);
+  std::vsnprintf(buf, sizeof(buf), fmt, args);
+  va_end(args);
+
+  return std::string(buf);
 }
 
 }  // namespace boltdb

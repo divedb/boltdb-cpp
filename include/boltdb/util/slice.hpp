@@ -25,6 +25,8 @@ class ByteSlice {
   // Get the number of reference to same byte slice.
   int ref_count() const { return _ref_count.count(); }
 
+  std::size_t size() const { return _size; }
+
   // Get a string representation of this byte slice.
   std::string to_string() const { return std::string(_data, _size); }
 
