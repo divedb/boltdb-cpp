@@ -1,13 +1,18 @@
+#include <fcntl.h>
+#include <unistd.h>
+
 #include <cstdio>
+#include <fstream>
 #include <iostream>
+#include <map>
+#include <numeric>
+#include <string>
+#include <vector>
+
+using namespace std;
 
 int main() {
-  int num = 42;
-  char buf[128];
-
-  int res = snprintf(buf, sizeof(buf), "%02x", num);
-
-  printf("buf = %s\n", buf);
+  int fd = open("a", O_CREAT);
 
   return 0;
 }

@@ -1,0 +1,3 @@
+add_executable(file_system_test file_system_test.cpp)
+target_link_directories(file_system_test PRIVATE ${CMAKE_BINARY_DIR}/src/fs)
+target_link_libraries(file_system_test PRIVATE file_system)

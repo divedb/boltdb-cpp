@@ -2,6 +2,8 @@
 
 #include <algorithm>
 #include <cstring>
+#include <iomanip>
+#include <sstream>
 
 #include "boltdb/util/util.hpp"
 
@@ -23,14 +25,10 @@ ByteSlice::ByteSlice(const Byte* data, std::size_t size) {
 
 ByteSlice::ByteSlice(const Byte* data) : ByteSlice(data, strlen(data)) {}
 
-ByteSlice::ByteSlice(const std::string& data)
-    : ByteSlice(data.c_str(), data.size()) {}
+ByteSlice::ByteSlice(const std::string& data) : ByteSlice(data.c_str(), data.size()) {}
 
 ByteSlice::ByteSlice(const ByteSlice& other)
-    : _data(other._data),
-      _size(other._size),
-      _cap(other._cap),
-      _ref_count(other._ref_count) {}
+    : _data(other._data), _size(other._size), _cap(other._cap), _ref_count(other._ref_count) {}
 
 ByteSlice::~ByteSlice() { destroy(); }
 
@@ -43,6 +41,26 @@ ByteSlice& ByteSlice::operator=(const ByteSlice& other) {
   copy(other);
 
   return *this;
+}
+
+inline std::string ByteSlice::to_string() const { return std::string(_data, _size); }
+
+std::string ByteSlice::to_hex() const {
+  if (size() == 0) {
+    return "[]";
+  }
+
+  std::ostringstream oss;
+  oss << '[';
+  oss << std::hex << _data[0];
+
+  for (int i = 1; i < _size; i++) {
+    oss << ',' << std::hex << _data[i];
+  }
+
+  oss << ']';
+
+  return oss.str();
 }
 
 void ByteSlice::destroy() {

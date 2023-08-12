@@ -1,6 +1,7 @@
 #ifndef BOLTDB_CPP_UTIL_HPP_
 #define BOLTDB_CPP_UTIL_HPP_
 
+#include <algorithm>
 #include <cassert>
 #include <cstdarg>
 #include <cstdlib>
@@ -37,6 +38,16 @@ std::string format(const char* fmt, ...) {
   va_end(args);
 
   return std::string(buf);
+}
+
+template <typename Container>
+Container merge(const Container& c1, const Container& c2) {
+  auto size = c1.size() + c2.size();
+  Container result(size);
+
+  std::merge(c1.begin(), c1.end(), c2.begin(), c2.end(), result.begin());
+
+  return result;
 }
 
 }  // namespace boltdb
