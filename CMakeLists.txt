@@ -10,6 +10,8 @@ set(GOOGLE_TEST_HEADER ${PROJECT_BINARY_DIR}/_deps/googletest-src/googletest)
 
 include_directories(${BOLTDB_INSTALL_INCLUDE_DIR})
 
+include(ClangTidy)
+
 # Include googletest
 Include(FetchContent)
 FetchContent_Declare(
