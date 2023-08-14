@@ -9,6 +9,7 @@
 #include <string>
 #include <string_view>
 
+#include "boltdb/util/status.hpp"
 #include "boltdb/util/types.hpp"
 
 namespace boltdb {
@@ -23,6 +24,26 @@ class FileHandle {
 
   [[nodiscard]] int fd() const { return fd_; }
   [[nodiscard]] std::string path() const { return path_; }
+
+  // Applies or removes an advisory lock on the file associated with the file
+  // descriptor fd.
+  // A lock is applied by specifying an operation parameter that is one of
+  // LOCK_SH or LOCK_EX with the optional addition of LOCK_NB.
+  // To unlock an existing lock operation should be LOCK_UN.
+  // man 2 flock:
+  //    Requesting a lock on an object that is already locked normally causes
+  //    the caller to be blocked until the lock may be acquired. If LOCK_NB is
+  //    included in operation, then this will not happen; instead the call will
+  //    fail and the error EWOULDBLOCK will be returned.
+  // NOTES
+  //  Locks are on files, not file descriptors.  That is, file descriptors
+  //  duplicated through dup(2) or fork(2) do not result in multiple instances
+  //  of a lock, but rather multiple references to a single lock.  If a process
+  //  holding a lock on a file forks and the child explicitly unlocks the file,
+  //  the parent will lose its lock.
+  //
+  //  Processes blocked awaiting a lock may be awakened by signals.
+  [[nodiscard]] Status flock(int operation, double timeout_s) const;
 
  private:
   int fd_;
@@ -40,13 +61,19 @@ class FileSystem {
   // nullptr will be returned.
   // TODO(gc): change to gsl::zstring later
   static std::unique_ptr<FileHandle> create(const char* path) noexcept;
-  static std::unique_ptr<FileHandle> open(const char* path, int mode,
-                                          int perm) noexcept;
+  static std::unique_ptr<FileHandle> open(const char* path, int oflag,
+                                          int permission) noexcept;
 
   // Check if the given file corresponds to an existing file or directory.
   // Return true if the given path or file status corresponds to an existing
   // file or directory, false otherwise.
   static bool exists(FileHandle& handle);
+
+  // Remove the file or directory specified by path.
+  // If path specifies a directory, remove(path) is equivalent of rmdir(path).
+  // Otherwise, it is the equivalent of unlink(path).
+  // Return `StatusOK` if successfull; otherwise `StatusErr` with error message.
+  static Status remove(FileHandle& handle);
 };
 
 }  // namespace boltdb

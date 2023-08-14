@@ -1,15 +1,15 @@
 #include "boltdb/db/db.hpp"
 
-#include <fcntl.h>
+#include "boltdb/fs/file_system.hpp"
 
 namespace boltdb {
 
-[[nodiscard]] Status open(std::string path, int mode, Options options,
+[[nodiscard]] Status open(std::string path, int permission, Options options,
                           DB** out_db) {
-  int flag = O_RDWR;
+  auto handle = FileSystem::open(path.c_str(), options.open_flag(), permission);
 
-  if (options.is_read_only()) {
-    flag = O_RDONLY;
+  if (handle == nullptr) {
+    return Status(StatusType::kStatusErr, "Fail to open: " + path);
   }
 }
 

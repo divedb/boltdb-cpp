@@ -57,7 +57,7 @@ struct Meta {
 
 // Open a database at the specified path.
 // If the file does not exist then it will be created automatically.
-[[nodiscard]] Status open(std::string path, int mode, Options options,
+[[nodiscard]] Status open(std::string path, int permission, Options options,
                           DB** out_db);
 
 }  // namespace boltdb

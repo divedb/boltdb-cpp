@@ -7,7 +7,7 @@
 
 namespace boltdb {
 
-enum StatusType : i8 { kStatusOK, kStatusError, kStatusCorrupt };
+enum StatusType : i8 { kStatusOK, kStatusErr, kStatusCorrupt };
 
 class Status {
  public:
@@ -18,6 +18,8 @@ class Status {
   // Explicit convert to bool.
   // Get true if the status type is `kStatusOK`, otherwise false.
   explicit operator bool() const { return status_type_ == kStatusOK; }
+
+  [[nodiscard]] StatusType status_type() const { return status_type_; }
 
  private:
   StatusType status_type_;
