@@ -6,10 +6,12 @@
 #include <vector>
 
 #include "boltdb/db/file_handle.hpp"
-#include "boltdb/db/options.hpp"
 #include "boltdb/storage/page.hpp"
 #include "boltdb/transaction/transaction.hpp"
 #include "boltdb/util/common.hpp"
+#include "boltdb/util/options.hpp"
+#include "boltdb/util/status.hpp"
+#include "boltdb/util/types.hpp"
 
 namespace boltdb {
 
@@ -22,25 +24,23 @@ class Tx;
 // accessed before Open() is called.
 class DB {
  public:
-  DB(std::string_view path, )
-
   // Get the path to currently open database file.
   std::string path() const;
 
  private:
-  Options _options;
-  std::string _path;
-  FileHandle* _file;
-  FileHandle* _lock_file;  // windows only
-  Byte* _dataref;          // mmap'ed readonly, write throws SEGV
-  int _data_size;
-  int _file_size;  // current on disk file size
-  Meta* _meta0;
-  Meta* _meta1;
-  int _page_size;
-  bool _opened;
-  Tx* _rwtx;
-  std::vector<Tx*> _txs;
+  Options options_;
+  std::string path_;
+  FileHandle* file_;
+  FileHandle* lock_file_;  // windows only
+  Byte* dataref_;          // mmap'ed readonly, write throws SEGV
+  int data_size_;
+  int file_size_;  // current on disk file size
+  Meta* meta0_;
+  Meta* meta1_;
+  int page_size_;
+  bool opened_;
+  Tx* rwtx_;
+  std::vector<Tx*> txs_;
 };
 
 struct Meta {
@@ -54,6 +54,11 @@ struct Meta {
   TxnID txid;       // Transaction id
   u64 checksum;
 };
+
+// Open a database at the specified path.
+// If the file does not exist then it will be created automatically.
+[[nodiscard]] Status open(std::string path, int mode, Options options,
+                          DB** out_db);
 
 }  // namespace boltdb
 

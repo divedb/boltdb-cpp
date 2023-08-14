@@ -1,65 +1,120 @@
 #ifndef BOLTDB_CPP_DB_OPTIONS_HPP_
 #define BOLTDB_CPP_DB_OPTIONS_HPP_
 
-#include "boltdb/util/common.hpp"
+#include <fcntl.h>
+
+#include "boltdb/util/types.hpp"
 
 namespace boltdb {
 
 // Options represents the options that can be set when opening a database.
 class Options {
  public:
-  // Accessor
-  bool is_strict_mode() const { return _strict_mode; }
-  bool is_no_sync() const { return _no_sync; }
-  bool is_no_grow_sync() const { return _no_grow_sync; }
-  bool is_read_only() const { return _read_only; }
+  constexpr static const int kDefaultMaxBatchSize = 1000;
+  constexpr static const int kDefaultMaxBatchDelay = 10;
+  constexpr static const int kDefaultAllocSize = 16 * 1024 * 1024;
 
-  Duration timeout() const { return _timeout; }
-  int mmap_flags() const { return _mmapflags; }
-  int initial_mmap_size() const { return _initial_mmap_size; }
+  // Accessor
+  [[nodiscard]] bool is_strict_mode() const { return strict_mode_; }
+  [[nodiscard]] bool is_no_sync() const { return no_sync_; }
+  [[nodiscard]] bool is_no_grow_sync() const { return no_grow_sync_; }
+  [[nodiscard]] bool is_read_only() const { return read_only_; }
+
+  [[nodiscard]] int open_flag() const { return open_flag_; }
+  [[nodiscard]] double timeout() const { return timeout_; }
+  [[nodiscard]] int mmap_flags() const { return mmapflags_; }
+  [[nodiscard]] int initial_mmap_size() const { return initial_mmap_size_; }
+  [[nodiscard]] int max_batch_size() const { return max_batch_size_; }
+  [[nodiscard]] int max_batch_delay() const { return max_batch_delay_; }
+  [[nodiscard]] int alloc_size() const { return alloc_size_; }
 
   // Modifier
+  Options& set_open_flag(int open_flag) {
+    open_flag_ = open_flag;
+    return *this;
+  }
+
   Options& set_strict_mode(bool strict_mode) {
-    _strict_mode = strict_mode;
+    strict_mode_ = strict_mode;
     return *this;
   }
 
   Options& set_no_sync(bool no_sync) {
-    _no_sync = no_sync;
+    no_sync_ = no_sync;
     return *this;
   }
 
   Options& set_no_grow_sync(bool no_grow_sync) {
-    _no_grow_sync = no_grow_sync;
+    no_grow_sync_ = no_grow_sync;
     return *this;
   }
 
   Options& set_read_only(bool read_only) {
-    _read_only = read_only;
+    read_only_ = read_only;
     return *this;
   }
 
-  Options& set_timeout(Duration timeout) {
-    _timeout = timeout;
+  Options& set_timeout(double timeout) {
+    timeout_ = timeout;
     return *this;
   }
 
   Options& set_mmap_flags(int mmapflags) {
-    _mmapflags = mmapflags;
+    mmapflags_ = mmapflags;
     return *this;
   }
 
   Options& set_initial_mmap_size(int initial_mmap_size) {
-    _initial_mmap_size = initial_mmap_size;
+    initial_mmap_size_ = initial_mmap_size;
+    return *this;
+  }
+
+  Options& set_max_batch_size(int max_batch_size) {
+    max_batch_size_ = max_batch_size;
+    return *this;
+  }
+
+  // Set max batch delay in milli seconds.
+  Options& set_max_batch_delay(int max_batch_delay_ms) {
+    max_batch_delay_ = max_batch_delay_ms;
+    return *this;
+  }
+
+  Options& set_alloc_size(int alloc_size) {
+    alloc_size_ = alloc_size;
     return *this;
   }
 
  private:
+  // The flags specified for this argument must include exactly one of the
+  // following file access modes:
+  // O_RDONLY: open for reading only
+  // O_WRONLY: open for writing only
+  // O_RDWR: open for reading and writingc
+  // O_SEARCH: open directory for searching (this may depend on the OS)
+  // O_EXEC: open for execute only
+  // In addition any combination of the following values can be or'ed in
+  // `open_flag`:
+  // O_NONBLOCK: do not block on open or for data to become available
+  // O_APPEND: append on each write
+  // O_CREAT: create file if it does not exist
+  // O_TRUNC: truncate size to 0
+  // O_EXCL: error if O_CREAT and the file exists
+  // O_SHLOCK: atomically obtain a shared lock
+  // O_EXLOCK: atomically obtain an exclusive lock
+  // O_DIRECTORY: restrict open to a directory
+  // O_NOFOLLOW: do not follow symlinks
+  // O_SYMLINK: allow open of symlinks
+  // O_EVTONLY: descriptor requested for event notifications only
+  // O_CLOEXEC: mark as close-on-exec
+  // O_NOFOLLOW_ANY: do not follow symlinks in the entire path
+  int open_flag_{O_RDWR};
+
   // When enabled, the database will perform a Check() after every commit.
   // A panic is issued if the database is in an inconsistent state. This
   // flag has a large performance impact so it should only be used for
   // debugging purposes.
-  bool _strict_mode{};
+  bool strict_mode_{};
 
   // Setting the NoSync flag will cause the database to skip fsync()
   // calls after each commit. This can be useful when bulk loading data
@@ -71,7 +126,7 @@ class Options {
   // ignored.  See the comment on that constant for more details.
   //
   // THIS IS UNSAFE. PLEASE USE WITH CAUTION.
-  bool _no_sync{true};
+  bool no_sync_{true};
 
   // When true, skips the truncate call when growing the database.
   // Setting this to true is only safe on non-ext3/ext4 systems.
@@ -79,20 +134,20 @@ class Options {
   // bypasses a truncate() and fsync() syscall on remapping.
   //
   // https://github.com/boltdb/bolt/issues/284
-  bool _no_grow_sync{};
+  bool no_grow_sync_{};
 
   // Open database in read-only mode. Use flock(..., LOCK_SH | LOCK_NB) to
   // grab a shared lock (UNIX).
-  bool _read_only;
+  bool read_only_{};
 
   // Timeout is the amount of time to wait to obtain a file lock.
   // When set to zero it will wait indefinitely. This option is only
   // available on Darwin and Linux.
-  Duration _timeout{};
+  double timeout_{};
 
   // If you want to read the entire database fast, you can set MmapFlag to
   // syscall.MAP_POPULATE on Linux 2.6.23+ for sequential read-ahead.
-  int _mmapflags;
+  int mmapflags_{};
 
   // InitialMmapSize is the initial mmap size of the database
   // in bytes. Read transactions won't block write transaction
@@ -102,7 +157,7 @@ class Options {
   // If <= 0, the initial map size is 0.
   // If initialMmapSize is smaller then the previous database size.
   // it takes no effect.
-  int _initial_mmap_size;
+  int initial_mmap_size_{};
 
   // MaxBatchSize is the maximum size of a batch. Default value is
   // copied from DefaultMaxBatchSize in Open.
@@ -110,7 +165,7 @@ class Options {
   // If <=0, disables batching.
   //
   // Do not change concurrently with calls to Batch.
-  int _max_batch_size;
+  int max_batch_size_{kDefaultMaxBatchSize};
 
   // MaxBatchDelay is the maximum delay before a batch starts.
   // Default value is copied from DefaultMaxBatchDelay in Open.
@@ -118,12 +173,12 @@ class Options {
   // If <=0, effectively disables batching.
   //
   // Do not change concurrently with calls to Batch.
-  Duration _max_batch_delay;
+  int max_batch_delay_{kDefaultMaxBatchDelay};
 
   // AllocSize is the amount of space allocated when the database
   // needs to create new pages. This is done to amortize the cost
   // of truncate() and fsync() when growing the data file.
-  int _alloc_size;
+  int alloc_size_{kDefaultAllocSize};
 };
 
 }  // namespace boltdb

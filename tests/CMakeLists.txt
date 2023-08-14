@@ -1,4 +1,5 @@
 add_subdirectory(fs)
+add_subdirectory(util)
 
 # add_executable(alloc_test alloc_test.cpp)
 # add_executable(slice_test slice_test.cpp)

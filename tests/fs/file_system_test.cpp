@@ -9,3 +9,9 @@ TEST(FileSystemTest, CreateOK) {
   EXPECT_TRUE(handle != nullptr);
   EXPECT_TRUE(boltdb::FileSystem::exists(*handle));
 }
+
+int main(int argc, char** argv) {
+  ::testing::InitGoogleTest(&argc, argv);
+
+  return RUN_ALL_TESTS();
+}

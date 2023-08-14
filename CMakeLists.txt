@@ -5,11 +5,13 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_FLAGS "${CMKAE_CXX_FLAGS} -g -Wall")
-set(BOLTDB_INSTALL_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include)
-set(GOOGLE_TEST_HEADER ${PROJECT_BINARY_DIR}/_deps/googletest-src/googletest)
+set(BOLTDB_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include)
+set(GOOGLE_TEST_INCLUDE_DIR ${PROJECT_BINARY_DIR}/_deps/googletest-src/googletest/include)
 
-include_directories(${BOLTDB_INSTALL_INCLUDE_DIR})
+include_directories(${BOLTDB_INCLUDE_DIR})
+include_directories(${GOOGLE_TEST_INCLUDE_DIR})
 
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 include(ClangTidy)
 
 # Include googletest

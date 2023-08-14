@@ -3,6 +3,8 @@
 
 namespace boltdb {
 
+#define NO_DISCARD [[nodiscard]]
+
 #define DISALLOW_COPY(Typename) \
   Typename(const Typename&);    \
   void operator=(const Typename&)
