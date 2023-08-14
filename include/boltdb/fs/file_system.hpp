@@ -5,9 +5,9 @@
 #include <unistd.h>
 
 #include <cstdint>
+#include <iostream>
 #include <memory>
 #include <string>
-#include <string_view>
 
 #include "boltdb/util/status.hpp"
 #include "boltdb/util/types.hpp"
@@ -20,7 +20,7 @@ namespace boltdb {
 class FileHandle {
  public:
   explicit FileHandle(int fd, const char* path) : fd_(fd), path_(path) {}
-  ~FileHandle() { close(fd_); }
+  ~FileHandle() noexcept;
 
   [[nodiscard]] int fd() const { return fd_; }
   [[nodiscard]] std::string path() const { return path_; }
@@ -43,9 +43,10 @@ class FileHandle {
   //  the parent will lose its lock.
   //
   //  Processes blocked awaiting a lock may be awakened by signals.
-  [[nodiscard]] Status flock(int operation, double timeout_s) const;
+  [[nodiscard]] Status flock(int operation, double timeout_s);
 
  private:
+  bool flocked_;
   int fd_;
   std::string path_;
 };

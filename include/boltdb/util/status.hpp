@@ -21,6 +21,24 @@ class Status {
 
   [[nodiscard]] StatusType status_type() const { return status_type_; }
 
+  // Debug.
+  friend std::ostream& operator<<(std::ostream& os, const Status& status) {
+    StatusType st = status.status_type();
+
+    switch (st) {
+      case StatusType::kStatusOK:
+        return os << "OK";
+      case StatusType::kStatusErr:
+        return os << "Error: " << status.message_;
+      case StatusType::kStatusCorrupt:
+        return os << "Corrupt: " << status.message_;
+      default:
+        break;
+    }
+
+    return os;
+  }
+
  private:
   StatusType status_type_;
   std::string message_;

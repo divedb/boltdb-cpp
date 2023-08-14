@@ -8,10 +8,24 @@
 #include <string>
 #include <thread>
 
+#include "boltdb/util/timer.hpp"
+
 namespace boltdb {
 
-Status FileHandle::flock(int operation, double timeout) const {
-  auto start = std::chrono::high_resolution_clock::now();
+FileHandle::~FileHandle() noexcept {
+  if (flocked_) {
+    // TODO(gc): fix this.
+    try {
+      (void)flock(LOCK_UN, 0);
+    } catch (...) {
+    }
+  }
+
+  close(fd_);
+}
+
+Status FileHandle::flock(int operation, double timeout) {
+  Timer timer(timeout);
 
   while (true) {
     int res = ::flock(fd_, operation);
@@ -26,17 +40,14 @@ Status FileHandle::flock(int operation, double timeout) const {
     }
 
     // Check timeout.
-    auto now = std::chrono::high_resolution_clock::now();
-    auto elapsed =
-        std::chrono::duration_cast<std::chrono::duration<double>>(now - start)
-            .count();
-
-    if (timeout > 0 && elapsed > timeout) {
+    if (timeout > 0 && timer.is_timeout()) {
       return Status(StatusType::kStatusErr, "Flock timeout");
     }
 
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
   }
+
+  flocked_ = true;
 
   return Status{};
 }
