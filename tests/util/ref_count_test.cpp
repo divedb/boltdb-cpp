@@ -1,28 +1,32 @@
-#define CATCH_CONFIG_MAIN
-
 #include "boltdb/util/ref_count.hpp"
 
-#include <catch2/catch.hpp>
+#include <gtest/gtest.h>
 
 using namespace boltdb;
 
-TEST_CASE("Constructor", "[Reference Count]") {
+TEST(RefCountTest, Constructor) {
   RefCount ref1;
 
-  REQUIRE(ref1.count() == 1);
+  EXPECT_EQ(1, ref1.count());
 
   RefCount ref2(ref1);
 
-  REQUIRE(ref1.count() == 2);
-  REQUIRE(ref2.count() == 2);
+  EXPECT_EQ(2, ref1.count());
+  EXPECT_EQ(2, ref2.count());
 
   RefCount ref3;
 
-  REQUIRE(ref3.count() == 1);
+  EXPECT_EQ(1, ref3.count());
 
   ref1 = ref3;
 
-  REQUIRE(ref1.count() == 2);
-  REQUIRE(ref3.count() == 2);
-  REQUIRE(ref2.count() == 1);
+  EXPECT_EQ(2, ref1.count());
+  EXPECT_EQ(2, ref3.count());
+  EXPECT_EQ(1, ref2.count());
+}
+
+int main(int argc, char** argv) {
+  ::testing::InitGoogleTest(&argc, argv);
+
+  return RUN_ALL_TESTS();
 }

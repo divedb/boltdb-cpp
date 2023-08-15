@@ -1,6 +1,5 @@
-#define CATCH_CONFIG_MAIN
+#include <gtest/gtest.h>
 
-#include <catch2/catch.hpp>
 #include <cstddef>
 #include <vector>
 
@@ -47,18 +46,24 @@ void memory_pool_test(const std::vector<std::size_t>& block_sizes) {
   REQUIRE(pool.bytes_outstanding() == 0);
 }
 
-TEST_CASE("Memory allocation for small block size", "[Memory Pool]") {
+TEST(MemoryPoolTest, SmallBlockSize) {
   std::vector<std::size_t> block_sizes = {1, 3, 5, 7, 9};
   memory_pool_test(block_sizes);
 }
 
-TEST_CASE("Memory allocation for large block size", "[Memory Pool]") {
+TEST(MemoryPoolTest, LargeBlockSize) {
   std::vector<std::size_t> block_sizes = {1 << 10, 1 << 11, 1 << 12, 1 << 13,
                                           1 << 15};
   memory_pool_test(block_sizes);
 }
 
-TEST_CASE("Memory allocation for mixed block size", "[Memory Pool]") {
+TEST(MemoryPoolTest, MixedBlockSize) {
   std::vector<std::size_t> block_sizes = {1 << 10, 1, 1 << 12, 3, 1 << 15};
   memory_pool_test(block_sizes);
+}
+
+int main(int argc, char** argv) {
+  ::testing::InitGoogleTest(&argc, argv);
+
+  return RUN_ALL_TESTS();
 }
