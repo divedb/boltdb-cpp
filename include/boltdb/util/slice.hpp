@@ -10,8 +10,9 @@
 
 namespace boltdb {
 
-// The ByteSlice class represents a slice of bytes in memory. It is important to note that this class is not
-// thread-safe. It internally maintains a reference count, which increments when it is copied or assigned.
+// The ByteSlice class represents a slice of bytes in memory. It is important to
+// note that this class is not thread-safe. It internally maintains a reference
+// count, which increments when it is copied or assigned.
 class ByteSlice {
  public:
   ByteSlice();
@@ -26,24 +27,24 @@ class ByteSlice {
   ByteSlice& operator=(const ByteSlice& other);
 
   // Get the number of reference to same byte slice.
-  int ref_count() const { return _ref_count.count(); }
+  [[nodiscard]] int ref_count() const { return _ref_count.count(); }
 
-  std::size_t size() const { return _size; }
+  [[nodiscard]] std::size_t size() const { return _size; }
 
   // Get a string representation of this byte slice.
-  std::string to_string() const;
+  [[nodiscard]] std::string to_string() const;
 
   // Get a hex string representation of this byte slice.
-  std::string to_hex() const;
+  [[nodiscard]] std::string to_hex() const;
 
  private:
   void destroy();
   void copy(const ByteSlice& other);
 
-  Byte* _data;
-  std::size_t _size;
-  std::size_t _cap;
-  RefCount _ref_count;
+  Byte* data_;
+  std::size_t size_;
+  std::size_t cap_;
+  RefCount ref_count_;
 };
 
 }  // namespace boltdb

@@ -1,4 +1,5 @@
 #include <fcntl.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 #include <cstdio>
@@ -12,16 +13,14 @@
 using namespace std;
 
 int main() {
-  int fd = open("a", O_CREAT);
-  int res = flock(fd, LOCK_SH);
+  int fd = open("/tmp/dnscache.json", O_RDONLY);
+  struct stat stat;
+  if (fstat(fd, &stat) == -1) {
+    cerr << "stat fail";
+    return 1;
+  }
 
-  cout << "res = " << res << endl;
-
-  res = flock(fd, LOCK_EX);
-  cout << "res = " << res << endl;
-
-  res = flock(fd, LOCK_EX);
-  cout << "res = " << res << endl;
+  cout << "size of tmp: " << stat.st_size << endl;
 
   return 0;
 }

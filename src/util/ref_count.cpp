@@ -1,8 +1,8 @@
 #include "boltdb/util/ref_count.hpp"
 
-using namespace boltdb;
+namespace boltdb {
 
-RefCount::RefCount() : _count(new int(1)) {}
+RefCount::RefCount() : count_(new int(1)) {}
 
 RefCount::RefCount(const RefCount& other) { copy(other); }
 
@@ -20,13 +20,15 @@ RefCount& RefCount::operator=(const RefCount& other) {
 RefCount::~RefCount() { release(); }
 
 void RefCount::release() {
-  if (_count && --*_count == 0) {
-    delete _count;
-    _count = nullptr;
+  if (count_ != nullptr && --*count_ == 0) {
+    delete count_;
+    count_ = nullptr;
   }
 }
 
 void RefCount::copy(const RefCount& other) {
-  _count = other._count;
-  *_count = *_count + 1;
+  count_ = other.count_;
+  *count_ = *count_ + 1;
 }
+
+}  // namespace boltdb

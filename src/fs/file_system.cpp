@@ -1,6 +1,7 @@
 #include "boltdb/fs/file_system.hpp"
 
 #include <sys/file.h>
+#include <sys/stat.h>
 
 #include <cerrno>
 #include <chrono>
@@ -83,6 +84,18 @@ Status FileSystem::remove(FileHandle& handle) {
   }
 
   return Status{};
+}
+
+std::uintmax_t FileSystem::file_size(FileHandle& handle) {
+  struct stat st;
+  int fd = handle.fd();
+  int res = fstat(fd, &st);
+
+  if (res == -1) {
+    return static_cast<std::uintmax_t>(-1);
+  }
+
+  return st.st_size;
 }
 
 }  // namespace boltdb

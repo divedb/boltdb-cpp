@@ -7,28 +7,32 @@
 
 #include "boltdb/util/util.hpp"
 
-using namespace boltdb;
+namespace boltdb {
 
-ByteSlice::ByteSlice() : _data(nullptr), _size(0), _cap(0) {}
+ByteSlice::ByteSlice() : data_(nullptr), size_(0), cap_(0) {}
 
 ByteSlice::ByteSlice(const Byte* data, std::size_t size) {
   // TODO(gc): validate argument (NULL)
   auto& pool = MemoryPool::instance();
 
   // Add extra 1 to termainate.
-  _size = std::min(strlen(data), size);
-  _cap = round_up_to_power_of_two(_size + 1);
-  _data = pool.allocate(_cap);
+  size_ = std::min(strlen(data), size);
+  cap_ = round_up_to_power_of_two(size_ + 1);
+  data_ = pool.allocate(cap_);
 
-  std::strncpy(_data, data, _size);
+  std::strncpy(data_, data, size);
 }
 
 ByteSlice::ByteSlice(const Byte* data) : ByteSlice(data, strlen(data)) {}
 
-ByteSlice::ByteSlice(const std::string& data) : ByteSlice(data.c_str(), data.size()) {}
+ByteSlice::ByteSlice(const std::string& data)
+    : ByteSlice(data.c_str(), data.size()) {}
 
 ByteSlice::ByteSlice(const ByteSlice& other)
-    : _data(other._data), _size(other._size), _cap(other._cap), _ref_count(other._ref_count) {}
+    : data_(other.data_),
+      size_(other.size_),
+      cap_(other.cap_),
+      ref_count_(other.ref_count_) {}
 
 ByteSlice::~ByteSlice() { destroy(); }
 
@@ -43,7 +47,9 @@ ByteSlice& ByteSlice::operator=(const ByteSlice& other) {
   return *this;
 }
 
-inline std::string ByteSlice::to_string() const { return std::string(_data, _size); }
+inline std::string ByteSlice::to_string() const {
+  return std::string(data_, size_);
+}
 
 std::string ByteSlice::to_hex() const {
   if (size() == 0) {
@@ -52,10 +58,10 @@ std::string ByteSlice::to_hex() const {
 
   std::ostringstream oss;
   oss << '[';
-  oss << std::hex << _data[0];
+  oss << std::hex << data_[0];
 
-  for (int i = 1; i < _size; i++) {
-    oss << ',' << std::hex << _data[i];
+  for (int i = 1; i < size_; i++) {
+    oss << ',' << std::hex << data_[i];
   }
 
   oss << ']';
@@ -64,14 +70,16 @@ std::string ByteSlice::to_hex() const {
 }
 
 void ByteSlice::destroy() {
-  if (_ref_count.unique() && _data) {
-    MemoryPool::instance().deallocate(_data, _cap);
+  if (ref_count.unique() && data_) {
+    MemoryPool::instance().deallocate(data_, cap_);
   }
 }
 
 void ByteSlice::copy(const ByteSlice& other) {
-  _data = other._data;
-  _size = other._size;
-  _cap = other._cap;
-  _ref_count = other._ref_count;
+  data_ = other.data_;
+  size_ = other.size_;
+  cap_ = other.cap_;
+  ref_count_ = other.ref_count_;
 }
+
+}  // namespace boltdb

@@ -75,6 +75,10 @@ class FileSystem {
   // Otherwise, it is the equivalent of unlink(path).
   // Return `StatusOK` if successfull; otherwise `StatusErr` with error message.
   static Status remove(FileHandle& handle);
+
+  // Get size of the file and return -1 if failed.
+  // TODO(gc): get size of directory
+  std::uintmax_t file_size(FileHandle& handle);
 };
 
 }  // namespace boltdb

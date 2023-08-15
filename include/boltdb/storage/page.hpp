@@ -2,13 +2,19 @@
 #define BOLTDB_CPP_STORAGE_PAGE_HPP_
 
 #include <cstdint>
+#include <string>
 
 #include "boltdb/util/slice.hpp"
 #include "boltdb/util/types.hpp"
 
 namespace boltdb {
 
-enum PageFlag : u16 { kBranch = 0x01, kLeaf = 0x02, kMeta = 0x04, kFreeList = 0x08 };
+enum PageFlag : u16 {
+  kBranch = 0x01,
+  kLeaf = 0x02,
+  kMeta = 0x04,
+  kFreeList = 0x08
+};
 enum LeafFlag : u16 { kBucket = 0x01 };
 
 // Forward declaration.
@@ -16,39 +22,39 @@ class Meta;
 class LeafPageElement;
 class BranchPageElement;
 
-// Represents a generic page structure, which could be converted to `meta`, `freelist`, `branch` and `leaf`
-// pages.
+// Represents a generic page structure, which could be converted to `meta`,
+// `freelist`, `branch` and `leaf` pages.
 class Page {
  public:
   // Get page flag.
-  PageFlag flag() const;
+  [[nodiscard]] PageFlag flag() const;
 
   // Get number of leaf page elements.
-  u16 count() const;
+  [[nodiscard]] u16 count() const;
 
   // Get number of overflow pages.
-  u32 overflow() const;
+  [[nodiscard]] u32 overflow() const;
 
   // Get page id.
-  PageID pid() const;
+  [[nodiscard]] PageID pid() const;
 
-  // Get a human reabable page type string used for debugging.
-  std::string type() const;
+  // Get a human readable page type string used for debugging.
+  [[nodiscard]] std::string type() const;
 
   // Get a pointer to the metadata section of the page.
-  Meta* meta() const;
+  [[nodiscard]] Meta* meta() const;
 
   // Get the leaf node by index.
-  LeafPageElement* leaf_page_element(u16 index) const;
+  [[nodiscard]] LeafPageElement* leaf_page_element(u16 index) const;
 
-  // TODO:
-  LeafPageElement* leaf_page_elements() const;
+  // TODO(gc): fix this
+  [[nodiscard]] LeafPageElement* leaf_page_elements() const;
 
   // Get the branch node by index.
-  BranchPageElement* branch_page_element(u16 index) const;
+  [[nodiscard]] BranchPageElement* branch_page_element(u16 index) const;
 
-  // TODO:
-  BranchPageElement* branch_page_elements() const;
+  // TODO(gc): fix this
+  [[nodiscard]] BranchPageElement* branch_page_elements() const;
 
   void hexdump(int n) const;
 
@@ -57,36 +63,36 @@ class Page {
   template <typename T>
   T* cast() const;
 
-  PageFlag _flag;  // 2 bytes, identify page type
-  u16 _count;      // 2 bytes
-  u32 _overflow;   // 4 bytes, number of overflow pages
-  PageID _pid;     // 8 bytes, page id
+  PageFlag flag_;  // 2 bytes, identify page type
+  u16 count_;      // 2 bytes
+  u32 overflow_;   // 4 bytes, number of overflow pages
+  PageID pid_;     // 8 bytes, page id
 };
 
 // BranchPageElement represents a node on a branch page.
 class BranchPageElement {
  public:
   // Get a byte slice of the node key.
-  ByteSlice key() const;
+  [[nodiscard]] ByteSlice key() const;
 
  private:
-  u32 _key_size;
-  PageID _pid;
+  u32 key_size_;
+  PageID pid_;
 };
 
 // LeafPageElement represents a node on a leaf page.
 class LeafPageElement {
  public:
   // Get a byte slice of the node key.
-  ByteSlice key() const;
+  [[nodiscard]] ByteSlice key() const;
 
   // Get a byte slice of the node value.
-  ByteSlice value() const;
+  [[nodiscard]] ByteSlice value() const;
 
  private:
-  u32 _flags;
-  u32 _key_size;
-  u32 _value_size;
+  u32 flags_;
+  u32 key_size_;
+  u32 value_size_;
 };
 
 static constexpr const int kPageHeaderSize = sizeof(Page);

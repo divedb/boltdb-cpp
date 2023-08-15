@@ -14,10 +14,10 @@ class RefCount {
   ~RefCount();
 
   // Check if the object has a unique reference.
-  bool unique() const { return _count && *_count == 1; }
+  bool unique() const { return count_ != nullptr && *count_ == 1; }
 
   // Get the number of references to the object.
-  int count() const { return *_count; }
+  int count() const { return *count_; }
 
   // Releases the ownership of the managed object.
   void release();
@@ -27,7 +27,7 @@ class RefCount {
 
   void copy(const RefCount& other);
 
-  mutable int* _count;
+  mutable int* count_;
 };
 
 }  // namespace boltdb
