@@ -29,7 +29,7 @@ constexpr static inline int round_up_to_power_of_two(int x) {
 }
 
 // A simple implementation of format.
-std::string format(const char* fmt, ...) {
+inline std::string format(const char* fmt, ...) {
   static char buf[1024];
 
   va_list args;

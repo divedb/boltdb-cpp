@@ -78,7 +78,7 @@ class FileSystem {
 
   // Get size of the file and return -1 if failed.
   // TODO(gc): get size of directory
-  std::uintmax_t file_size(FileHandle& handle);
+  static std::uintmax_t file_size(FileHandle& handle);
 };
 
 }  // namespace boltdb

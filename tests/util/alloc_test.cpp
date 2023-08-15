@@ -2,6 +2,8 @@
 
 #include <cstddef>
 #include <vector>
+#include <algorithm>
+#include <numeric>
 
 #include "boltdb/alloc/memory_pool.hpp"
 #include "boltdb/util/slice.hpp"
@@ -29,7 +31,7 @@ void memory_pool_test(const std::vector<std::size_t>& block_sizes) {
   std::vector<std::pair<Byte*, std::size_t>> byte_ptrs =
       allocate_blocks(pool, block_sizes);
 
-  REQUIRE(pool.bytes_outstanding() == expected);
+  EXPECT_EQ(expected, pool.bytes_outstanding());
 
   std::random_shuffle(byte_ptrs.begin(), byte_ptrs.end());
 
@@ -40,10 +42,10 @@ void memory_pool_test(const std::vector<std::size_t>& block_sizes) {
     pool.deallocate(ptr, nbytes);
     expected -= nbytes;
 
-    REQUIRE(pool.bytes_outstanding() == expected);
+    EXPECT_EQ(expected, pool.bytes_outstanding());
   }
 
-  REQUIRE(pool.bytes_outstanding() == 0);
+  EXPECT_EQ(0, pool.bytes_outstanding());
 }
 
 TEST(MemoryPoolTest, SmallBlockSize) {

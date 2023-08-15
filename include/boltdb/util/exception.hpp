@@ -8,12 +8,12 @@ namespace boltdb {
 
 class DBException : public std::exception {
  public:
-  DBException(const std::string& error);
+  explicit DBException(std::string error);
 
-  virtual const char* what() const noexcept override;
+  [[nodiscard]] const char* what() const noexcept override;
 
  private:
-  std::string _error;
+  std::string error_;
 };
 
 }  // namespace boltdb

@@ -8,6 +8,7 @@
 #include <cstdio>
 #include <string>
 #include <thread>
+#include <cstring>
 
 #include "boltdb/util/timer.hpp"
 

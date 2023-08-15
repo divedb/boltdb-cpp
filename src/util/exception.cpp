@@ -1,7 +1,9 @@
 #include "boltdb/util/exception.hpp"
 
-using namespace boltdb;
+namespace boltdb {
 
-DBException::DBException(const std::string& error) : _error(error) {}
+  DBException::DBException(std::string error) : error_(std::move(error)) {}
 
-const char* DBException::what() const noexcept { return _error.c_str(); }
+  const char* DBException::what() const noexcept { return error_.c_str(); }
+
+}

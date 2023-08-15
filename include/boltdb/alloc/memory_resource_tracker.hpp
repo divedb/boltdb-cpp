@@ -16,26 +16,26 @@ namespace boltdb {
 // The main purpose is to detect memory leaks.
 class MemoryResourceTracker : public std::pmr::memory_resource {
  public:
+  MemoryResourceTracker() = default;
+
   explicit MemoryResourceTracker(
-      std::pmr::memory_resource* upstream = std::pmr::get_default_resource())
-      : _upstream(upstream),
-        _bytes_allocated(0),
-        _bytes_outstanding(0),
-        _bytes_highwater(0) {}
+      std::pmr::memory_resource* upstream)
+      : upstream_(upstream)
+         {}
 
   // Get the total number of bytes that have been allocated.
-  std::size_t bytes_allocated() const { return _bytes_allocated; }
+  [[nodiscard]] std::size_t bytes_allocated() const { return bytes_allocated_; }
 
   // Get the total number of bytes that have been deallocated.
-  std::size_t bytes_deallocated() const {
-    return _bytes_allocated - _bytes_outstanding;
+  [[nodiscard]] std::size_t bytes_deallocated() const {
+    return bytes_allocated_ - bytes_outstanding_;
   }
 
   // Get the number of bytes that haven't been deallocated.
-  std::size_t bytes_outstanding() const { return _bytes_outstanding; }
+  [[nodiscard]] std::size_t bytes_outstanding() const { return bytes_outstanding_; }
 
   // Get the highest number of allocated bytes.
-  std::size_t bytes_highwater() const { return _bytes_highwater; }
+  [[nodiscard]] std::size_t bytes_highwater() const { return bytes_highwater_; }
 
   std::ostream& dump(std::ostream& os) const {
     os << "[bytes allocated]:" << bytes_allocated() << '\n';
@@ -47,12 +47,12 @@ class MemoryResourceTracker : public std::pmr::memory_resource {
 
  protected:
   void* do_allocate(std::size_t nbytes, std::size_t alignment) override {
-    void* p = _upstream->allocate(nbytes, alignment);
+    void* p = upstream_->allocate(nbytes, alignment);
 
-    _blocks.push_back(Block{p, nbytes, alignment});
-    _bytes_allocated += nbytes;
-    _bytes_outstanding += nbytes;
-    _bytes_highwater = std::max(_bytes_highwater, _bytes_outstanding);
+    blocks_.push_back(Block{p, nbytes, alignment});
+    bytes_allocated_ += nbytes;
+    bytes_outstanding_ += nbytes;
+    bytes_highwater_ = std::max(bytes_highwater_, bytes_outstanding_);
 
     return p;
   }
@@ -62,22 +62,26 @@ class MemoryResourceTracker : public std::pmr::memory_resource {
     // Check that deallocation args exactly match allocation args.
     // arguments. Note that, this check may not be necessary when this tracker
     // is used solely for internal purposes.
-    auto i = std::find_if(_blocks.begin(), _blocks.end(),
+    auto i = std::find_if(blocks_.begin(), blocks_.end(),
                           [p](Block& block) { return block.ptr == p; });
-    if (i == _blocks.end()) {
+    if (i == blocks_.end()) {
       throw std::invalid_argument("do_deallocate: Invalid pointer.");
-    } else if (i->nbytes != nbytes) {
+    }
+
+    if (i->nbytes != nbytes) {
       throw std::invalid_argument("do_deallocate: Size mismatch.");
-    } else if (i->alignment != alignment) {
+    }
+
+    if (i->alignment != alignment) {
       throw std::invalid_argument("do_deallocate: Alignment mismatch.");
     }
 
-    _upstream->deallocate(p, i->nbytes, i->alignment);
-    _blocks.erase(i);
-    _bytes_outstanding -= nbytes;
+    upstream_->deallocate(p, i->nbytes, i->alignment);
+    blocks_.erase(i);
+    bytes_outstanding_ -= nbytes;
   }
 
-  bool do_is_equal(
+  [[nodiscard]] bool do_is_equal(
       const std::pmr::memory_resource& other) const noexcept override {
     return this == &other;
   }
@@ -89,11 +93,11 @@ class MemoryResourceTracker : public std::pmr::memory_resource {
     std::size_t alignment;
   };
 
-  std::pmr::memory_resource* _upstream;
-  std::pmr::vector<Block> _blocks;
-  std::size_t _bytes_allocated;
-  std::size_t _bytes_outstanding;
-  std::size_t _bytes_highwater;
+  std::pmr::memory_resource* upstream_{std::pmr::get_default_resource()};
+  std::pmr::vector<Block> blocks_;
+  std::size_t bytes_allocated_{0};
+  std::size_t bytes_outstanding_{0};
+  std::size_t bytes_highwater_{0};
 };
 
 }  // namespace boltdb

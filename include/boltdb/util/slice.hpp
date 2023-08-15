@@ -19,7 +19,7 @@ class ByteSlice {
   ByteSlice(const Byte* data, std::size_t size);
   explicit ByteSlice(const Byte* data);
   explicit ByteSlice(const std::string& data);
-  ByteSlice(const ByteSlice& other);
+  ByteSlice(const ByteSlice& other) = default;
 
   ~ByteSlice();
 
@@ -27,9 +27,9 @@ class ByteSlice {
   ByteSlice& operator=(const ByteSlice& other);
 
   // Get the number of reference to same byte slice.
-  [[nodiscard]] int ref_count() const { return _ref_count.count(); }
+  [[nodiscard]] int ref_count() const { return ref_count_.count(); }
 
-  [[nodiscard]] std::size_t size() const { return _size; }
+  [[nodiscard]] std::size_t size() const { return size_; }
 
   // Get a string representation of this byte slice.
   [[nodiscard]] std::string to_string() const;

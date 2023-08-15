@@ -1,1 +1,3 @@
-add_library(util timer.cpp)
+file(GLOB SOURCES *.cpp)
+add_library(util ${SOURCES})
+AddClangTidy(util)

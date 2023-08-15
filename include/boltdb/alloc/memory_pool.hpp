@@ -7,7 +7,7 @@
 #include <string>
 
 #include "boltdb/alloc/memory_resource_tracker.hpp"
-#include "boltdb/util/common.hpp"
+#include "boltdb/util/types.hpp"
 
 namespace boltdb {
 
@@ -20,7 +20,7 @@ namespace boltdb {
 class MemoryPool {
  public:
   static constexpr int kPageSize = (1 << 10);        // 4096
-  static constexpr int kInitBufferSize = (1 << 20);  // 1 M
+  static constexpr int kInitBufferSize = (1 << 20);  // 1M
 
   // Get a singleton pool instance.
   static MemoryPool& instance() {
@@ -35,10 +35,10 @@ class MemoryPool {
   // memory.
   Byte* allocate(std::size_t nbytes) {
     if (is_small_size(nbytes)) {
-      return _stack_pool.allocate(nbytes);
+      return stack_pool_.allocate(nbytes);
     }
 
-    return _heap_pool.allocate(nbytes);
+    return heap_pool_.allocate(nbytes);
   }
 
   // Deallocate a previously allocated memory block specified by the pointer 'p'
@@ -49,52 +49,51 @@ class MemoryPool {
   // issues.
   void deallocate(Byte* p, std::size_t nbytes) {
     if (is_small_size(nbytes)) {
-      _stack_pool.deallocate(p, nbytes);
+      stack_pool_.deallocate(p, nbytes);
 
       return;
     }
 
-    _heap_pool.deallocate(p, nbytes);
+    heap_pool_.deallocate(p, nbytes);
   }
 
   // Get the number of bytes that haven't been deallocated.
-  std::size_t bytes_outstanding() const {
-    return _stack_tracker.bytes_outstanding() +
-           _heap_tracker.bytes_outstanding();
+  [[nodiscard]] std::size_t bytes_outstanding() const {
+    return stack_tracker_.bytes_outstanding() +
+           heap_tracker_.bytes_outstanding();
   }
 
   // Get statistic information, including number of bytes have been allocated
   // and deallocated, and high water bytes.
-  std::string statistic() const {
+  [[nodiscard]] std::string statistic() const {
     std::ostringstream oss;
 
     oss << "=== stack allocation info ===\n";
-    _stack_tracker.dump(oss);
+    stack_tracker_.dump(oss);
 
     oss << "=== heap allocation info ===\n";
-    _heap_tracker.dump(oss);
+    heap_tracker_.dump(oss);
 
     return oss.str();
   }
 
  protected:
   MemoryPool()
-      : _buffer(kInitBufferSize),
-        _stack_tracker(&_buffer),
-        _heap_tracker(),
-        _stack_pool(&_stack_tracker),
-        _heap_pool(&_heap_tracker) {}
+      : buffer_(kInitBufferSize),
+        stack_tracker_(&buffer_),
+        stack_pool_(&stack_tracker_),
+        heap_pool_(&heap_tracker_) {}
 
  private:
   static bool is_small_size(std::size_t nbytes) {
     return nbytes < (kPageSize / 4);
   }
 
-  std::pmr::monotonic_buffer_resource _buffer;
-  MemoryResourceTracker _stack_tracker;
-  MemoryResourceTracker _heap_tracker;
-  std::pmr::polymorphic_allocator<Byte> _stack_pool;
-  std::pmr::polymorphic_allocator<Byte> _heap_pool;
+  std::pmr::monotonic_buffer_resource buffer_;
+  MemoryResourceTracker stack_tracker_;
+  MemoryResourceTracker heap_tracker_;
+  std::pmr::polymorphic_allocator<Byte> stack_pool_;
+  std::pmr::polymorphic_allocator<Byte> heap_pool_;
 };
 
 }  // namespace boltdb

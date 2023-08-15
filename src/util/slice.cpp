@@ -28,12 +28,6 @@ ByteSlice::ByteSlice(const Byte* data) : ByteSlice(data, strlen(data)) {}
 ByteSlice::ByteSlice(const std::string& data)
     : ByteSlice(data.c_str(), data.size()) {}
 
-ByteSlice::ByteSlice(const ByteSlice& other)
-    : data_(other.data_),
-      size_(other.size_),
-      cap_(other.cap_),
-      ref_count_(other.ref_count_) {}
-
 ByteSlice::~ByteSlice() { destroy(); }
 
 ByteSlice& ByteSlice::operator=(const ByteSlice& other) {
@@ -47,7 +41,7 @@ ByteSlice& ByteSlice::operator=(const ByteSlice& other) {
   return *this;
 }
 
-inline std::string ByteSlice::to_string() const {
+std::string ByteSlice::to_string() const {
   return std::string(data_, size_);
 }
 
@@ -60,7 +54,7 @@ std::string ByteSlice::to_hex() const {
   oss << '[';
   oss << std::hex << data_[0];
 
-  for (int i = 1; i < size_; i++) {
+  for (std::size_t i = 1; i < size_; i++) {
     oss << ',' << std::hex << data_[i];
   }
 
@@ -70,7 +64,7 @@ std::string ByteSlice::to_hex() const {
 }
 
 void ByteSlice::destroy() {
-  if (ref_count.unique() && data_) {
+  if (ref_count_.unique() && data_) {
     MemoryPool::instance().deallocate(data_, cap_);
   }
 }

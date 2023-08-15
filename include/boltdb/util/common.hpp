@@ -10,8 +10,8 @@ namespace boltdb {
   void operator=(const Typename&)
 
 #define DISALLOW_MOVE(Typename) \
-  Typename(const Typename&&);   \
-  void operator=(const Typename&&)
+  Typename(const Typename&&) noexcept;   \
+  void operator=(const Typename&&) noexcept
 
 #define UNUSED_VAR(var) ((void)(var))
 
