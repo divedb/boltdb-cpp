@@ -58,19 +58,19 @@ void Page::hexdump(int n) const {
 }
 
 std::string Page::type() const {
-  if (flag_ & kBranch != 0) {
+  if ((flag_ & kBranch) != 0) {
     return "branch";
   }
 
-  if (flag_ & kLeaf != 0) {
+  if ((flag_ & kLeaf) != 0) {
     return "leaf";
   }
 
-  if (flag_ & kMeta) {
+  if ((flag_ & kMeta) != 0) {
     return "meta";
   }
 
-  if (flag_ & kFreeList) {
+  if ((flag_ & kFreeList) != 0) {
     return "freelist";
   }
 
