@@ -41,9 +41,7 @@ ByteSlice& ByteSlice::operator=(const ByteSlice& other) {
   return *this;
 }
 
-std::string ByteSlice::to_string() const {
-  return std::string(data_, size_);
-}
+std::string ByteSlice::to_string() const { return {data_, size_}; }
 
 std::string ByteSlice::to_hex() const {
   if (size() == 0) {
