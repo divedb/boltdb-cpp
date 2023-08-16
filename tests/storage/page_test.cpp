@@ -3,7 +3,8 @@
 #include <gtest/gtest.h>
 
 #include <vector>
-consexpr static const int kMockPageSize = 4096;
+
+constexpr static const int kMockPageSize = 4096;
 
 using namespace boltdb;
 
@@ -20,9 +21,9 @@ TEST(PageTest, PageType) {
                                          {PageFlag::kFreeList, "freelist"}};
 
   for (auto&& tc : test_cases) {
-    Page page(0, tc.flag, kMockPageSi);
+    Page page(0, tc.flag, kMockPageSize);
 
-    EXPECT_EQ(page.type, page.type());
+    EXPECT_EQ(tc.type, page.type());
   }
 }
 
