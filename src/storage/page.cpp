@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <sstream>
+#include <type_traits>
 
 #include "boltdb/util/util.hpp"
 
@@ -9,7 +10,8 @@ namespace boltdb {
 
 template <typename Pointer>
 Byte* advance_n_bytes(Pointer p, std::size_t n) {
-  return std::next(reinterpret_cast<Byte*>(p), n);
+  return std::next(
+      reinterpret_cast<Byte*>(const_cast<std::remove_const_t<Pointer>>(p)), n);
 }
 
 inline Byte* Page::skip_page_header() const {
@@ -52,41 +54,41 @@ void Page::hexdump(int n) const {
 }
 
 std::string Page::type() const {
-  if (flags_ & kBranch != 0) {
+  if (flag_ & kBranch != 0) {
     return "branch";
   }
 
-  if (flags_ & kLeaf != 0) {
+  if (flag_ & kLeaf != 0) {
     return "leaf";
   }
 
-  if (flags_ & kMeta) {
+  if (flag_ & kMeta) {
     return "meta";
   }
 
-  if (flags_ & kFreeList) {
+  if (flag_ & kFreeList) {
     return "freelist";
   }
 
-  return format("unknown<%02x>", flags_);
+  return format("unknown<%02x>", flag_);
 }
 
 ByteSlice BranchPageElement::key() const {
   Byte* key = advance_n_bytes(this, pos_);
 
-  return ByteSlice(key, key_size_);
+  return {key, key_size_};
 }
 
 ByteSlice LeafPageElement::key() const {
   Byte* key = advance_n_bytes(this, pos_);
 
-  return ByteSlice(key, key_size_);
+  return {key, key_size_};
 }
 
 ByteSlice LeafPageElement::value() const {
   Byte* value = advance_n_bytes(this, pos_ + key_size_);
 
-  return ByteSlice(value, value_size_);
+  return {value, value_size_};
 }
 
 }  // namespace boltdb

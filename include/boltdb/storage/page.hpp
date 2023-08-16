@@ -97,7 +97,7 @@ class BranchPageElement {
 // LeafPageElement represents a node on a leaf page.
 class LeafPageElement {
  public:
-  LeagPageElement(u32 flags, u32 pos, u32 key_size, u32 value_size)
+  LeafPageElement(u32 flags, u32 pos, u32 key_size, u32 value_size)
       : flags_(flags),
         pos_(pos),
         key_size_(key_size),
