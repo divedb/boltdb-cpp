@@ -14,8 +14,8 @@ Byte* advance_n_bytes(Pointer p, std::size_t n) {
 }
 
 template <typename Pointer>
-Byte* advance_n_bytes(const Pointer p, std::size_t n) {
-  return advance_n_bytes(const_cast<Pointer>(p), n);
+Byte* advance_n_bytes(const Pointer* p, std::size_t n) {
+  return advance_n_bytes(const_cast<Pointer*>(p), n);
 }
 
 inline Byte* Page::skip_page_header() const {
@@ -30,16 +30,27 @@ inline T* Page::cast_ptr() const {
   return reinterpret_cast<T*>(base);
 }
 
-Meta* Page::meta() const { return cast_ptr<Meta*>(); }
+Meta* Page::meta() const { return cast_ptr<Meta>(); }
 
 LeafPageElement* Page::leaf_page_element(u16 index) const {
-  LeafPageElement* base = cast_ptr<LeafPageElement>();
+  auto base = cast_ptr<LeafPageElement>();
 
   return &base[index];
 }
 
-std::span<BranchPageElement> Page::branch_page_element(u16 index) const {
-  BranchPageElement* base = cast_ptr<BranchPageElement>();
+std::span<LeafPageElement> Page::leaf_page_elements() const {
+  auto base = cast_ptr<LeafPageElement>();
+
+  return {base, count_};
+}
+
+BranchPageElement* Page::branch_page_element(u16 index) const {
+  auto base = cast_ptr<BranchPageElement>();
+
+  return &base[index];
+
+std::span<BranchPageElement> Page::branch_page_elements() const {
+  auto base = cast_ptr<BranchPageElement>();
 
   return {base, count_};
 }
