@@ -10,8 +10,12 @@ namespace boltdb {
 
 template <typename Pointer>
 Byte* advance_n_bytes(Pointer p, std::size_t n) {
-  return std::next(
-      reinterpret_cast<Byte*>(const_cast<std::remove_const_t<Pointer>>(p)), n);
+  return std::next(reinterpret_cast<Byte*>(p), n);
+}
+
+template <typename Pointer>
+Byte* advance_n_bytes(const Pointer p, std::size_t n) {
+  return advance_n_bytes(const_cast<Pointer>(p), n);
 }
 
 inline Byte* Page::skip_page_header() const {

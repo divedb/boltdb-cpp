@@ -8,6 +8,7 @@
 #include <map>
 #include <numeric>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 using namespace std;
@@ -37,12 +38,8 @@ class Derived2 : public Base, public Proxy<Derived1> {
 };
 
 int main() {
-  vector<Base*> v;
-  v.push_back(new Derived1());
-  v.push_back(new Derived2());
-
-  ((Proxy<Derived1>*)v[0])->foo();
-  ((Proxy<Derived2*>)v[1])->foo(1);
+  remove_const_t<const int*> a;
+  decltype(a) b;
 
   return 0;
 }
