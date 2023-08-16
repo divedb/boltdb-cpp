@@ -2,7 +2,9 @@
 #define BOLTDB_CPP_STORAGE_PAGE_HPP_
 
 #include <cstdint>
+#include <span>
 #include <string>
+#include <vector>
 
 #include "boltdb/util/slice.hpp"
 #include "boltdb/util/types.hpp"
@@ -15,6 +17,7 @@ enum PageFlag : u16 {
   kMeta = 0x04,
   kFreeList = 0x08
 };
+
 enum LeafFlag : u16 { kBucket = 0x01 };
 
 // Forward declaration.
@@ -22,21 +25,24 @@ class Meta;
 class LeafPageElement;
 class BranchPageElement;
 
-// Represents a generic page structure, which could be converted to `meta`,
-// `freelist`, `branch` and `leaf` pages.
+// `Page` represents a generic page structure, which could be converted to
+// `meta`, `freelist`, `branch` and `leaf` pages.
 class Page {
  public:
+  Page(PageID pid, PageFlag flag, int page_size)
+      : flag_(flag), pid_(pid), pdata_(page_size) {}
+
   // Get page flag.
-  [[nodiscard]] PageFlag flag() const;
+  [[nodiscard]] PageFlag flag() const { return flag_; }
 
   // Get number of leaf page elements.
-  [[nodiscard]] u16 count() const;
+  [[nodiscard]] u16 count() const { return count_; }
 
   // Get number of overflow pages.
-  [[nodiscard]] u32 overflow() const;
+  [[nodiscard]] u32 overflow() const { return overflow_; }
 
   // Get page id.
-  [[nodiscard]] PageID pid() const;
+  [[nodiscard]] PageID pid() const { return pid_; }
 
   // Get a human readable page type string used for debugging.
   [[nodiscard]] std::string type() const;
@@ -47,35 +53,39 @@ class Page {
   // Get the leaf node by index.
   [[nodiscard]] LeafPageElement* leaf_page_element(u16 index) const;
 
-  // TODO(gc): fix this
-  [[nodiscard]] LeafPageElement* leaf_page_elements() const;
+  [[nodiscard]] std::span<LeafPageElement> leaf_page_elements() const;
 
   // Get the branch node by index.
   [[nodiscard]] BranchPageElement* branch_page_element(u16 index) const;
 
-  // TODO(gc): fix this
-  [[nodiscard]] BranchPageElement* branch_page_elements() const;
+  [[nodiscard]] std::span<BranchPageElement> branch_page_elements() const;
 
   void hexdump(int n) const;
 
  private:
-  // Cast base ptr of this page to `T` type.
-  template <typename T>
-  T* cast() const;
+  Byte* skip_page_header() const;
 
-  PageFlag flag_;  // 2 bytes, identify page type
-  u16 count_;      // 2 bytes
-  u32 overflow_;   // 4 bytes, number of overflow pages
-  PageID pid_;     // 8 bytes, page id
+  template <typename T>
+  T* cast_ptr() const;
+
+  PageFlag flag_;            // 2 bytes, identify page type
+  u16 count_{};              // 2 bytes
+  u32 overflow_{};           // 4 bytes, number of overflow pages
+  PageID pid_;               // 8 bytes, page id
+  std::vector<Byte> pdata_;  // Page data
 };
 
 // BranchPageElement represents a node on a branch page.
 class BranchPageElement {
  public:
+  BranchPageElement(u32 pos, u32 key_size, PageID pid)
+      : pos_(pos), key_size_(key_size), pid_(pid) {}
+
   // Get a byte slice of the node key.
   [[nodiscard]] ByteSlice key() const;
 
  private:
+  u32 pos_;
   u32 key_size_;
   PageID pid_;
 };
@@ -91,6 +101,7 @@ class LeafPageElement {
 
  private:
   u32 flags_;
+  u32 pos_;
   u32 key_size_;
   u32 value_size_;
 };

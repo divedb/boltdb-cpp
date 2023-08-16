@@ -19,6 +19,34 @@ bool init(FileHandle& handle, u32 page_size) {
 
 }  // namespace
 
+DB::DB(DB&& rhs) noexcept { move_aux(other); }
+
+DB& DB::operator=(DB&& other) noexcept {
+  move_aux(other);
+
+  return *this;
+}
+
+void DB::move_aux(DB&& other) noexcept {
+  if (this == &other) {
+    return;
+  }
+
+  // TODO(gc): fix move
+  options_ = other.options_;
+  file_handle_ = std::move(other.file_handle_);
+  lock_file_ = other.lock_file_;
+  dataref_ = other.dataref_;
+  data_size_ = other.data_size_;
+  file_size_ = other.file_size_;
+  meta0_ = other.meta0_;
+  meta1_ = other.meta1_;
+  page_size_ = other.page_size_;
+  opened_ = other.opened_;
+  rwtx_ = other.rwtx_;
+  txns_ = other.txns_;
+}
+
 [[nodiscard]] Status open(std::string path, int permission, Options options,
                           DB** out_db) {
   auto handle = FileSystem::open(path.c_str(), options.open_flag(), permission);

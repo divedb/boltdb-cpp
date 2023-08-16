@@ -2,10 +2,9 @@
 #define BOLTDB_CPP_DB_HPP_
 
 #include <fstream>
-#include <string_view>
+#include <memory>
 #include <vector>
 
-#include "boltdb/db/file_handle.hpp"
 #include "boltdb/storage/page.hpp"
 #include "boltdb/transaction/transaction.hpp"
 #include "boltdb/util/common.hpp"
@@ -24,23 +23,33 @@ class Tx;
 // accessed before Open() is called.
 class DB {
  public:
+  DB(std::unique_ptr<FileHandle> file_handle, Options options)
+      : file_handle_(std::move(file_handle)), options_(options) {}
+
+  // Move only.
+  DB(DB&& other) noexcept;
+  DB& operator=(DB&& other) noexcept;
+
+  DISALLOW_COPY(DB);
+
   // Get the path to currently open database file.
-  std::string path() const;
+  [[nodiscard]] std::string path() const { return file_handle_->path(); }
 
  private:
+  void move_aux(DB&& other) noexcept;
+
   Options options_;
-  std::string path_;
-  FileHandle* file_;
+  std::unique_ptr<FileHandle> file_handle_;
   FileHandle* lock_file_;  // windows only
   Byte* dataref_;          // mmap'ed readonly, write throws SEGV
   int data_size_;
   int file_size_;  // current on disk file size
-  Meta* meta0_;
-  Meta* meta1_;
+  Meta meta0_;
+  Meta meta1_;
   int page_size_;
   bool opened_;
   Tx* rwtx_;
-  std::vector<Tx*> txs_;
+  std::vector<Tx*> txns_;
 };
 
 struct Meta {

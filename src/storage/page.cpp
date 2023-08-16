@@ -1,43 +1,55 @@
 #include "boltdb/storage/page.hpp"
 
+#include <iostream>
+#include <sstream>
+
 #include "boltdb/util/util.hpp"
 
-using namespace boltdb;
+namespace boltdb {
 
-inline PageFlag Page::flag() const { return _flag; }
-
-inline u16 Page::count() const { return _count; }
-
-inline u32 Page::overflow() const { return _overflow; }
-
-inline PageID Page::pid() const { return _pid; }
-
-inline Meta* Page::meta() const { return cast<Meta*>(); }
-
-inline LeafPageElement* Page::leaf_page_element(u16 index) const {
-  LeafPageElement* base = cast<LeafPageElement>();
-
-  return &base[index];
+template <typename Pointer>
+Byte* advance_n_bytes(Pointer p, std::size_t n) {
+  return std::next(reinterpret_cast<Byte*>(p), n);
 }
 
-inline BranchPageElement* Page::branch_page_element(u16 index) const {
-  BranchPageElement* base = cast<BranchPageElement>();
-
-  return &base[index];
+inline Byte* Page::skip_page_header() const {
+  return advance_n_bytes(pdata_.data(), kPageHeaderSize);
 }
-
-void Page::hexdump(int n) const {}
 
 template <typename T>
-T* Page::cast() const {
-  return reinterpret_cast<T*>(reinterpret_cast<Byte*>(this) + kPageHeaderSize);
+inline T* Page::cast_ptr() const {
+  // Get base ptr, which excludes the page header.
+  Byte* base = skip_page_header();
+
+  return reinterpret_cast<T*>(base);
 }
 
-ByteSlice BranchPageElement::key() const { return ByteSlice(vptr, key_size); }
+Meta* Page::meta() const { return cast_ptr<Meta*>(); }
 
-ByteSlice LeafPageElement::key() const { return ByteSlice(vptr, key_size); }
+LeafPageElement* Page::leaf_page_element(u16 index) const {
+  LeafPageElement* base = cast_ptr<LeafPageElement>();
 
-ByteSlice LeafPageElement::value() const { return ByteSlice(vptr + key_size, value_size); }
+  return &base[index];
+}
+
+std::span<BranchPageElement> Page::branch_page_element(u16 index) const {
+  BranchPageElement* base = cast_ptr<BranchPageElement>();
+
+  return std::span(base, count_);
+}
+
+void Page::hexdump(int n) const {
+  std::ostringstream oss;
+  Byte* base = skip_page_header();
+
+  // TODO(gc): avoid large n
+  for (int i = 0; i < n; i++) {
+    oss << format("02x", *base);
+    std::advance(base, 1);
+  }
+
+  std::cout << oss.str();
+}
 
 std::string Page::type() const {
   if (flags & kBranch != 0) {
@@ -52,3 +64,23 @@ std::string Page::type() const {
     return format("unknown<%02x>", flags);
   }
 }
+
+ByteSlice BranchPageElement::key() const {
+  Byte* key = advance_n_bytes(this, pos_);
+
+  return ByteSlice(key, key_size_);
+}
+
+ByteSlice LeafPageElement::key() const {
+  Byte* key = advance_n_bytes(this, pos_);
+
+  return ByteSlice(key, key_size_);
+}
+
+ByteSlice LeafPageElement::value() const {
+  Byte* value = advance_n_bytes(this, pos_ + key_size_);
+
+  return ByteSlice(value, value_size_);
+}
+
+}  // namespace boltdb
