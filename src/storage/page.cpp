@@ -35,7 +35,7 @@ LeafPageElement* Page::leaf_page_element(u16 index) const {
 std::span<BranchPageElement> Page::branch_page_element(u16 index) const {
   BranchPageElement* base = cast_ptr<BranchPageElement>();
 
-  return std::span(base, count_);
+  return {base, count_};
 }
 
 void Page::hexdump(int n) const {
@@ -52,17 +52,23 @@ void Page::hexdump(int n) const {
 }
 
 std::string Page::type() const {
-  if (flags & kBranch != 0) {
+  if (flags_ & kBranch != 0) {
     return "branch";
-  } else if (flags & kLeaf != 0) {
-    return "leaf";
-  } else if (flags & kMeta) {
-    return "meta";
-  } else if (flags & kFreeList) {
-    return "freelist";
-  } else {
-    return format("unknown<%02x>", flags);
   }
+
+  if (flags_ & kLeaf != 0) {
+    return "leaf";
+  }
+
+  if (flags_ & kMeta) {
+    return "meta";
+  }
+
+  if (flags_ & kFreeList) {
+    return "freelist";
+  }
+
+  return format("unknown<%02x>", flags_);
 }
 
 ByteSlice BranchPageElement::key() const {

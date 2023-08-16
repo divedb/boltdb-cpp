@@ -84,6 +84,10 @@ class BranchPageElement {
   // Get a byte slice of the node key.
   [[nodiscard]] ByteSlice key() const;
 
+  u32 pos() const { return pos_; }
+  u32 key_size() const { return key_size_; }
+  PageID pid() const { return pid_; }
+
  private:
   u32 pos_;
   u32 key_size_;
@@ -93,6 +97,17 @@ class BranchPageElement {
 // LeafPageElement represents a node on a leaf page.
 class LeafPageElement {
  public:
+  LeagPageElement(u32 flags, u32 pos, u32 key_size, u32 value_size)
+      : flags_(flags),
+        pos_(pos),
+        key_size_(key_size),
+        value_size_(value_size) {}
+
+  u32 flags() const { return flags_; }
+  u32 pos() const { return pos_; }
+  u32 key_size() const { return key_size_; }
+  u32 value_size() const { return value_size_; }
+
   // Get a byte slice of the node key.
   [[nodiscard]] ByteSlice key() const;
 

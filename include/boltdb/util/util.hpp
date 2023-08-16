@@ -37,7 +37,7 @@ inline std::string format(const char* fmt, ...) {
   std::vsnprintf(buf, sizeof(buf), fmt, args);
   va_end(args);
 
-  return std::string(buf);
+  return {buf};
 }
 
 template <typename Container>
