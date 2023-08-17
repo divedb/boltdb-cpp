@@ -93,10 +93,8 @@ constexpr static const u64 kCrc64Table[256] = {
 };
 
 u64 crc64_be(u64 crc, const Byte* p, size_t len) {
-  size_t i, t;
-
-  for (i = 0; i < len; i++) {
-    t = ((crc >> 56) ^ (*p++)) & 0xFF;
+  for (std::size_t i = 0; i < len; i++) {
+    std::size_t t = ((crc >> 56) ^ (*p++)) & 0xFF;
     crc = kCrc64Table[t] ^ (crc << 8);
   }
 

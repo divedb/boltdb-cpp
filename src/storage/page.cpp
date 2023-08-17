@@ -48,6 +48,7 @@ BranchPageElement* Page::branch_page_element(u16 index) const {
   auto base = cast_ptr<BranchPageElement>();
 
   return &base[index];
+}
 
   std::span<BranchPageElement> Page::branch_page_elements() const {
     auto base = cast_ptr<BranchPageElement>();
