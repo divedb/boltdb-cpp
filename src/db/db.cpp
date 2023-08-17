@@ -3,12 +3,12 @@
 #include <vector>
 
 #include "boltdb/fs/file_system.hpp"
+#include "boltdb/os/darwin.hpp"
 
 namespace boltdb {
 
 namespace {
 
-// Initialize the meta, freelist and root pages.
 bool init(FileHandle& handle, u32 page_size) {
   std::vector<Byte> buf(page_size * 4);
 
@@ -20,6 +20,14 @@ bool init(FileHandle& handle, u32 page_size) {
 }  // namespace
 
 DB::DB(DB&& rhs) noexcept { move_aux(other); }
+
+void DB::init() {
+  int page_size = OS::getpagesize();
+
+  for (int i = 0; i < 2; i++) {
+    Page page(i, PageFlag::kMeta, page_size);
+  }
+}
 
 DB& DB::operator=(DB&& other) noexcept {
   move_aux(other);

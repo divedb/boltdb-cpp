@@ -23,6 +23,15 @@ class Tx;
 // accessed before Open() is called.
 class DB {
  public:
+  // The largest step that can be taken when remapping the mmap.
+  constexpr static const int kMaxMmapStep = 1 << 30;  // 1GB
+
+  // The data file format version.
+  constexpr static const int kVersion = 1;
+
+  // Represents a marker value to indicate that a file is a Bolt DB.
+  constexpr static const int kMagic = 0xED0CDAED;
+
   DB(std::unique_ptr<FileHandle> file_handle, Options options)
       : file_handle_(std::move(file_handle)), options_(options) {}
 
@@ -37,6 +46,9 @@ class DB {
 
  private:
   void move_aux(DB&& other) noexcept;
+
+  // Initialize the meta, freelist and root pages.
+  void init();
 
   Options options_;
   std::unique_ptr<FileHandle> file_handle_;

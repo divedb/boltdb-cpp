@@ -48,63 +48,62 @@ BranchPageElement* Page::branch_page_element(u16 index) const {
   auto base = cast_ptr<BranchPageElement>();
 
   return &base[index];
-}
 
-std::span<BranchPageElement> Page::branch_page_elements() const {
-  auto base = cast_ptr<BranchPageElement>();
+  std::span<BranchPageElement> Page::branch_page_elements() const {
+    auto base = cast_ptr<BranchPageElement>();
 
-  return {base, count_};
-}
-
-void Page::hexdump(int n) const {
-  std::ostringstream oss;
-  Byte* base = skip_page_header();
-
-  // TODO(gc): avoid large n
-  for (int i = 0; i < n; i++) {
-    oss << format("02x", *base);
-    std::advance(base, 1);
+    return {base, count_};
   }
 
-  std::cout << oss.str();
-}
+  void Page::hexdump(int n) const {
+    std::ostringstream oss;
+    Byte* base = skip_page_header();
 
-std::string Page::type() const {
-  if ((flag_ & kBranch) != 0) {
-    return "branch";
+    // TODO(gc): avoid large n
+    for (int i = 0; i < n; i++) {
+      oss << format("02x", *base);
+      std::advance(base, 1);
+    }
+
+    std::cout << oss.str();
   }
 
-  if ((flag_ & kLeaf) != 0) {
-    return "leaf";
+  std::string Page::type() const {
+    if ((flag_ & kBranch) != 0) {
+      return "branch";
+    }
+
+    if ((flag_ & kLeaf) != 0) {
+      return "leaf";
+    }
+
+    if ((flag_ & kMeta) != 0) {
+      return "meta";
+    }
+
+    if ((flag_ & kFreeList) != 0) {
+      return "freelist";
+    }
+
+    return format("unknown<%02x>", flag_);
   }
 
-  if ((flag_ & kMeta) != 0) {
-    return "meta";
+  ByteSlice BranchPageElement::key() const {
+    Byte* key = advance_n_bytes(this, pos_);
+
+    return {key, key_size_};
   }
 
-  if ((flag_ & kFreeList) != 0) {
-    return "freelist";
+  ByteSlice LeafPageElement::key() const {
+    Byte* key = advance_n_bytes(this, pos_);
+
+    return {key, key_size_};
   }
 
-  return format("unknown<%02x>", flag_);
-}
+  ByteSlice LeafPageElement::value() const {
+    Byte* value = advance_n_bytes(this, pos_ + key_size_);
 
-ByteSlice BranchPageElement::key() const {
-  Byte* key = advance_n_bytes(this, pos_);
-
-  return {key, key_size_};
-}
-
-ByteSlice LeafPageElement::key() const {
-  Byte* key = advance_n_bytes(this, pos_);
-
-  return {key, key_size_};
-}
-
-ByteSlice LeafPageElement::value() const {
-  Byte* value = advance_n_bytes(this, pos_ + key_size_);
-
-  return {value, value_size_};
-}
+    return {value, value_size_};
+  }
 
 }  // namespace boltdb
