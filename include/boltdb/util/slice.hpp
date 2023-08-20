@@ -1,6 +1,8 @@
 #ifndef BOLTDB_CPP_UTIL_SLICE_H_
 #define BOLTDB_CPP_UTIL_SLICE_H_
 
+#include <assert.h>
+
 #include <cstddef>
 #include <string>
 
@@ -26,6 +28,9 @@ class ByteSlice {
   // Copy assignment.
   ByteSlice& operator=(const ByteSlice& other);
 
+  // Append a byte.
+  ByteSlice& append(Byte v);
+
   // Get the number of reference to same byte slice.
   [[nodiscard]] int ref_count() const { return ref_count_.count(); }
 
@@ -37,9 +42,22 @@ class ByteSlice {
   // Get a hex string representation of this byte slice.
   [[nodiscard]] std::string to_hex() const;
 
+  Byte operator[](int index) const {
+    assert(index < size_);
+
+    return data_[index];
+  }
+
+  Byte& operator[](int index) {
+    assert(index < size_);
+
+    return data_[index];
+  }
+
  private:
   void destroy();
   void copy(const ByteSlice& other);
+  void grow();
 
   Byte* data_;
   std::size_t size_;

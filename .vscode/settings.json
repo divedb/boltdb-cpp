@@ -102,7 +102,9 @@
         "stack": "cpp",
         "unordered_set": "cpp",
         "__string": "cpp",
-        "filesystem": "cpp"
+        "filesystem": "cpp",
+        "__availability": "cpp",
+        "format": "cpp"
     },
     "cmake.configureOnOpen": false
 }

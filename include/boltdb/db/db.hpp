@@ -64,7 +64,13 @@ class DB {
   std::vector<Tx*> txns_;
 };
 
-struct Meta {
+class Meta {
+ public:
+  // Serialize the given meta object.
+  static std::vector<Byte> serialize(const Meta& meta);
+
+  static Meta deserialize();
+
   u32 magic;
   u32 version;
   u32 page_size;

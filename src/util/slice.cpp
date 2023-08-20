@@ -41,6 +41,15 @@ ByteSlice& ByteSlice::operator=(const ByteSlice& other) {
   return *this;
 }
 
+ByteSlice& ByteSlice::append(Byte v) {
+  if (size_ >= cap_) {
+    grow();
+  }
+
+  data_[size_] = v;
+  size_++;
+}
+
 std::string ByteSlice::to_string() const { return {data_, size_}; }
 
 std::string ByteSlice::to_hex() const {
@@ -61,9 +70,11 @@ std::string ByteSlice::to_hex() const {
   return oss.str();
 }
 
+// TODO(gc): release the reference count here.
 void ByteSlice::destroy() {
   if (ref_count_.unique() && data_) {
     MemoryPool::instance().deallocate(data_, cap_);
+    ref_count_.release();
   }
 }
 
@@ -72,6 +83,17 @@ void ByteSlice::copy(const ByteSlice& other) {
   size_ = other.size_;
   cap_ = other.cap_;
   ref_count_ = other.ref_count_;
+}
+
+void ByteSlice::grow() {
+  std::size_t new_cap = std::max(1, cap_ * 2);
+
+  Byte* new_data = MemoryPool::instance().allocate(new_cap);
+  strncpy(new_data, data_, size_);
+  destroy();
+
+  data_ = new_data;
+  cap_ = new_cap_;
 }
 
 }  // namespace boltdb

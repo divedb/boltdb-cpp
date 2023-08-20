@@ -85,6 +85,16 @@ TEST(ByteSliceTest, MoveConstructorAndAssignment) {
   EXPECT_EQ(str1, slice2.to_string());
 }
 
+TEST(ByteSliceTest, Append) {
+  ByteSlice slice;
+
+  for (char ch : kAsciiLowercase) {
+    slice.append(ch);
+  }
+
+  EXPECT_STREQ(kAsciiLowercase, slice.to_string());
+}
+
 int main(int argc, char** argv) {
   ::testing::InitGoogleTest(&argc, argv);
 

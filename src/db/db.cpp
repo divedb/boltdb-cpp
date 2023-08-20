@@ -7,25 +7,23 @@
 
 namespace boltdb {
 
-namespace {
-
-bool init(FileHandle& handle, u32 page_size) {
-  std::vector<Byte> buf(page_size * 4);
-
-  for (int i = 0; i < 2; i++) {
-    Page* page = reinterpret_cast<Page*>(&buf[i * page_size]);
-  }
-}
-
-}  // namespace
-
 DB::DB(DB&& rhs) noexcept { move_aux(other); }
 
 void DB::init() {
-  int page_size = OS::getpagesize();
+  std::vector<Page> pages(4);
+  std::ostringstream oss;
 
   for (int i = 0; i < 2; i++) {
-    Page page(i, PageFlag::kMeta, page_size);
+    Page page(i, PageFlag::kMeta, page_size_);
+    Meta* meta = page.meta();
+    meta->magic = kMagic;
+    meta->version = kVersion;
+    meta->page_size = page_size_;
+    meta->freelist = 2;
+    meta->flags = 0;
+    meta->
+
+        pages[i] = std::move(page);
   }
 }
 
