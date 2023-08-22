@@ -13,11 +13,11 @@ ByteSlice::ByteSlice(const Byte* data, std::size_t size) {
   assert(data != nullptr);
 
   // Add 1 extra \0 to terminate.
-  size_ = std::min(strlen(data), size);
+  size_ = size;
   cap_ = round_up_to_power_of_two(size_ + 1);
   data_ = pool_.allocate(cap_);
 
-  std::strncpy(data_, data, size_);
+  std::memcpy(data_, data, size_);
 }
 
 ByteSlice::ByteSlice(std::size_t n, Byte v) : ByteSlice(std::string(n, v)) {}

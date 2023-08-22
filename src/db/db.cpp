@@ -5,13 +5,14 @@
 #include "boltdb/fs/file_system.hpp"
 #include "boltdb/os/darwin.hpp"
 #include "boltdb/util/binary.hpp"
+#include "boltdb/util/crc64.hpp"
 
 namespace boltdb {
 
 DB::DB(DB&& rhs) noexcept { move_aux(other); }
 
 void DB::init() {
-  std::vector<Page> pages(4);
+  std::vector<Page> pages;
   std::ostringstream oss;
 
   for (int i = 0; i < 2; i++) {
@@ -26,7 +27,7 @@ void DB::init() {
     meta->pgid = i;
     meta->txid = i;
 
-    pages[i] = std::move(page);
+    pages.push_back(page);
   }
 }
 
@@ -91,28 +92,61 @@ void DB::move_aux(DB&& other) noexcept {
 ByteSlice Meta::serialize(const Meta& meta) {
   ByteSlice slice;
 
-  binary::BigEndian::append_uint(slice, meta.magic);
-  binary::BigEndian::append_uint(slice, meta.version);
-  binary::BigEndian::append_uint(slice, meta.page_size);
-  binary::BigEndian::append_uint(slice, meta.flags);
-  binary::BigEndian::append_uint(slice, meta.root.root);
-  binary::BigEndian::append_uint(slice, meta.root.sequence);
-  binary::BigEndian::append_uint(slice, meta.freelist);
-  binary::BigEndian::append_uint(slice, meta.pgid);
-  binary::BigEndian::append_uint(slice, meta.txid);
-  binary::BigEndian::append_uint(slice, meta.checksum);
-
+  meta.write_with_checksum(slice);
+  
   return slice;
+}
+
+template <typename T>
+std::span<Byte> deserialize_aux(std::span<Byte> data, T& out_data) {
+  std::size_t offset = sizeof(T);
+  out_data = binary::BigEndian::uint<T>(data);
+
+  return data.subspan(offset);
 }
 
 // Deserialize meta from the given slice.
 Meta Meta::deserialize(ByteSlice slice) {
   Meta meta;
+  std::span<Byte> sp = slice.span();
 
-  meta.magic = binary::BigEndian::uint<decltype(meta.magic)>(slice);
-  
+  sp = deserialize_aux(sp, meta.magic);
+  sp = deserialize_aux(sp, meta.version);
+  sp = deserialize_aux(sp, meta.page_size);
+  sp = deserialize_aux(sp, meta.flags);
+  sp = deserialize_aux(sp, meta.root.root);
+  sp = deserialize_aux(sp, meta.root.sequence);
+  sp = deserialize_aux(sp, meta.freelist);
+  sp = deserialize_aux(sp, meta.pgid);
+  sp = deserialize_aux(sp, meta.txid);
+  sp = deserialize_aux(sp, meta.checksum);
 
   return meta;
 }
+
+void Meta::compute_checksum() const {
+  ByteSlice slice;
+
+  write_without_checksum(slice);
+  checksum = crc64(0, slice.data(), slice.size());
+}
+
+void Meta::write_with_checksum(ByteSlice slice) {
+  write_without_checksum(slice);
+  binary::BigEndian::append_uint(slice, checksum);
+}
+
+void Meta::write_without_checksum(ByteSlice slice) const {
+  binary::BigEndian::append_uint(slice, magic);
+  binary::BigEndian::append_uint(slice, version);
+  binary::BigEndian::append_uint(slice, page_size);
+  binary::BigEndian::append_uint(slice, flags);
+  binary::BigEndian::append_uint(slice, root.root);
+  binary::BigEndian::append_uint(slice, root.sequence);
+  binary::BigEndian::append_uint(slice, freelist);
+  binary::BigEndian::append_uint(slice, pgid);
+  binary::BigEndian::append_uint(slice, txid);
+}
+
 
 }  // namespace boltdb

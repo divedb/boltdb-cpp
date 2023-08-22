@@ -24,8 +24,9 @@ class ByteSlice {
   // Construct the slice with `n` copies of byte `v`.
   ByteSlice(std::size_t n, Byte v = 0);
 
-  // Construct slice from the given data.
-  // Note that, `size` should be in the range of [0, strlen(data))
+  // Construct the slice from the given data.
+  // Note that, `size` should be in the range of [0, strlen(data)).
+  // This supports binary data.
   ByteSlice(const Byte* data, std::size_t size);
 
   // Construct `ByteSlice` from the given data.
@@ -66,6 +67,9 @@ class ByteSlice {
   }
 
   std::span<Byte> span() const { return {data_, size_}; }
+
+  // Get a readable only view on this slice.
+  const Byte* data() const { return data_; }
 
  private:
   void destroy();

@@ -3,6 +3,7 @@
 #include <gtest/gtest.h>
 
 #include <cstddef>
+#include <span>
 #include <string>
 #include <utility>
 #include <vector>
@@ -93,6 +94,15 @@ TEST(ByteSliceTest, Append) {
   }
 
   EXPECT_EQ(kAsciiLowercase, slice.to_string());
+}
+
+TEST(ByteSliceTest, Span) {
+  ByteSlice slice("\x61\x62");
+
+  std::span<Byte> sp = slice.span();
+
+  EXPECT_EQ(0x61, sp[0]);
+  EXPECT_EQ(0x62, sp[1]); 
 }
 
 int main(int argc, char** argv) {

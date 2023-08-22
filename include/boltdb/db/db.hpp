@@ -72,6 +72,22 @@ class Meta {
   // Deserialize meta from the given slice.
   static Meta deserialize(ByteSlice slice);
 
+  void compute_checksum() const;
+
+  // Write meta information to the specified slice.
+  // This does *include* the checksum field.
+  void write_with_checksum(ByteSlice slice);
+
+  // Write meta information to the specified slice.
+  // This does *exclude* the checksum field.
+  void write_without_checksum(ByteSlice slice) const;
+
+  bool equals(const Meta& rhs) const {
+    return magic == rhs.meta && version == rhs.version && page_size == rhs.page_size && flags == rhs.flags &&
+      root.root == rhs.root.root && root.sequence == rhs.root.sequence && freelist == rhs.freelist && pgid == rhs.pgid &&
+      txid == rhs.txid && checksum == rhs.checksum;
+  } 
+
   u32 magic;
   u32 version;
   u32 page_size;
