@@ -11,8 +11,8 @@ using namespace boltdb;
 TEST(MetaTest, SerializeAndDeserialize) {
 	u32 page_size = OS::getpagesize();
 
-	Meta meta{.magic: DB::kMagic, .version: DB::kVersion, 
-		.page_size: page_size, .flags: 0, .root: {.root: 3, sequence: 0}, .freelist: 2, .pgid: 0, .txid: 0 };
+	Meta meta{.magic=DB::kMagic, .version=DB::kVersion, 
+		.page_size=page_size, .flags=0, .root={.root=3, .sequence=0}, .freelist=2, .pgid=0, .txid=0 };
 	meta.compute_checksum();
 
 	ByteSlice slice = Meta::serialize(meta);

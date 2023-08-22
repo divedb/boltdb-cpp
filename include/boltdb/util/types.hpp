@@ -20,7 +20,7 @@ using f64 = double;
 // TODO(gc): why not use std::byte
 using Byte = char;
 using PageID = u64;
-using TxID = u64;
+using TxnID = u64;
 using Duration = std::chrono::duration<f64>;
 
 }  // namespace boltdb

@@ -9,9 +9,11 @@
 
 namespace boltdb {
 
-DB::DB(DB&& rhs) noexcept { move_aux(other); }
+/*
+DB::DB(DB&& other) noexcept { move_aux(other); }
+*/
 
-void DB::init() {
+void DB::init() const {
   std::vector<Page> pages;
   std::ostringstream oss;
 
@@ -31,8 +33,9 @@ void DB::init() {
   }
 }
 
+/*
 DB& DB::operator=(DB&& other) noexcept {
-  move_aux(other);
+  move_aux(std::move(other));
 
   return *this;
 }
@@ -56,13 +59,14 @@ void DB::move_aux(DB&& other) noexcept {
   rwtx_ = other.rwtx_;
   txns_ = other.txns_;
 }
+*/
 
 [[nodiscard]] Status open(std::string path, int permission, Options options,
                           DB** out_db) {
   auto handle = FileSystem::open(path.c_str(), options.open_flag(), permission);
 
   if (handle == nullptr) {
-    return Status(StatusType::kStatusErr, "Fail to open: " + path);
+    return {StatusType::kStatusErr, "Fail to open: " + path};
   }
 
   // Lock file so that other processes using Bolt in read-write mode cannot use
@@ -86,6 +90,8 @@ void DB::move_aux(DB&& other) noexcept {
 
   if (FileSystem::file_size(*handle) == 0) {
   }
+
+  return {};
 }
 
 // Serialize the given meta object.
@@ -93,7 +99,7 @@ ByteSlice Meta::serialize(const Meta& meta) {
   ByteSlice slice;
 
   meta.write_with_checksum(slice);
-  
+
   return slice;
 }
 
@@ -124,19 +130,19 @@ Meta Meta::deserialize(ByteSlice slice) {
   return meta;
 }
 
-void Meta::compute_checksum() const {
+void Meta::compute_checksum() {
   ByteSlice slice;
 
   write_without_checksum(slice);
-  checksum = crc64(0, slice.data(), slice.size());
+  checksum = crc64_be(0, slice.data(), slice.size());
 }
 
-void Meta::write_with_checksum(ByteSlice slice) {
+void Meta::write_with_checksum(ByteSlice& slice) const {
   write_without_checksum(slice);
   binary::BigEndian::append_uint(slice, checksum);
 }
 
-void Meta::write_without_checksum(ByteSlice slice) const {
+void Meta::write_without_checksum(ByteSlice& slice) const {
   binary::BigEndian::append_uint(slice, magic);
   binary::BigEndian::append_uint(slice, version);
   binary::BigEndian::append_uint(slice, page_size);

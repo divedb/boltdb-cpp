@@ -26,11 +26,11 @@ struct BucketMeta {
 class Bucket {
  public:
   // MaxKeySize is the maximum length of a key, in bytes. (1 << 15)
-  static constexpr const int kMaxKeySize = 32768;
+  static constexpr const u16 kMaxKeySize = 32768;
 
   // MaxValueSize is the maximum length of a value, in bytes.
   // TODO(gc): why subtract 2
-  static constexpr const int kMaxValueSize = (1 << 31) - 2;
+  static constexpr const u32 kMaxValueSize = (1U << 31) - 2;
 
   static constexpr const f32 kMinFillPercent = 0.1;
   static constexpr const f32 kMaxFillPercent = 1.0;
