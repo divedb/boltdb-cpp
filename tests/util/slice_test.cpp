@@ -92,7 +92,7 @@ TEST(ByteSliceTest, Append) {
     slice.append(ch);
   }
 
-  EXPECT_STREQ(kAsciiLowercase, slice.to_string());
+  EXPECT_EQ(kAsciiLowercase, slice.to_string());
 }
 
 int main(int argc, char** argv) {

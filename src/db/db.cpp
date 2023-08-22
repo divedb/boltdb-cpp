@@ -4,6 +4,7 @@
 
 #include "boltdb/fs/file_system.hpp"
 #include "boltdb/os/darwin.hpp"
+#include "boltdb/util/binary.hpp"
 
 namespace boltdb {
 
@@ -21,9 +22,11 @@ void DB::init() {
     meta->page_size = page_size_;
     meta->freelist = 2;
     meta->flags = 0;
-    meta->
+    meta->root = {.root = 3, .sequence = 0};
+    meta->pgid = i;
+    meta->txid = i;
 
-        pages[i] = std::move(page);
+    pages[i] = std::move(page);
   }
 }
 
@@ -82,6 +85,34 @@ void DB::move_aux(DB&& other) noexcept {
 
   if (FileSystem::file_size(*handle) == 0) {
   }
+}
+
+// Serialize the given meta object.
+ByteSlice Meta::serialize(const Meta& meta) {
+  ByteSlice slice;
+
+  binary::BigEndian::append_uint(slice, meta.magic);
+  binary::BigEndian::append_uint(slice, meta.version);
+  binary::BigEndian::append_uint(slice, meta.page_size);
+  binary::BigEndian::append_uint(slice, meta.flags);
+  binary::BigEndian::append_uint(slice, meta.root.root);
+  binary::BigEndian::append_uint(slice, meta.root.sequence);
+  binary::BigEndian::append_uint(slice, meta.freelist);
+  binary::BigEndian::append_uint(slice, meta.pgid);
+  binary::BigEndian::append_uint(slice, meta.txid);
+  binary::BigEndian::append_uint(slice, meta.checksum);
+
+  return slice;
+}
+
+// Deserialize meta from the given slice.
+Meta Meta::deserialize(ByteSlice slice) {
+  Meta meta;
+
+  meta.magic = binary::BigEndian::uint<decltype(meta.magic)>(slice);
+  
+
+  return meta;
 }
 
 }  // namespace boltdb

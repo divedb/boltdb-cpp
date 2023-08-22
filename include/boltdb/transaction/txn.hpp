@@ -7,6 +7,8 @@
 
 namespace boltdb {
 
+class Txn {};
+
 // Tx represents a read-only or read/write transaction on the database.
 // Read-only transactions can be used for retrieving values for keys and
 // creating cursors. Read/write transactions can create and remove buckets and

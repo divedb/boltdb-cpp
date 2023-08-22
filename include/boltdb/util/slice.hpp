@@ -4,6 +4,7 @@
 #include <assert.h>
 
 #include <cstddef>
+#include <span>
 #include <string>
 
 #include "boltdb/alloc/memory_pool.hpp"
@@ -17,8 +18,17 @@ namespace boltdb {
 // count, which increments when it is copied or assigned.
 class ByteSlice {
  public:
-  ByteSlice();
+  // Construct an empty slice.
+  ByteSlice() = default;
+
+  // Construct the slice with `n` copies of byte `v`.
+  ByteSlice(std::size_t n, Byte v = 0);
+
+  // Construct slice from the given data.
+  // Note that, `size` should be in the range of [0, strlen(data))
   ByteSlice(const Byte* data, std::size_t size);
+
+  // Construct `ByteSlice` from the given data.
   explicit ByteSlice(const Byte* data);
   explicit ByteSlice(const std::string& data);
   ByteSlice(const ByteSlice& other) = default;
@@ -42,14 +52,15 @@ class ByteSlice {
   // Get a hex string representation of this byte slice.
   [[nodiscard]] std::string to_hex() const;
 
+  // Index access.
   Byte operator[](int index) const {
-    assert(index < size_);
+    assert(static_cast<std::size_t>(index) < size_);
 
     return data_[index];
   }
 
   Byte& operator[](int index) {
-    assert(index < size_);
+    assert(static_cast<std::size_t>(index) < size_);
 
     return data_[index];
   }
@@ -59,10 +70,11 @@ class ByteSlice {
   void copy(const ByteSlice& other);
   void grow();
 
-  Byte* data_;
-  std::size_t size_;
-  std::size_t cap_;
+  Byte* data_{nullptr};
+  std::size_t size_{0};
+  std::size_t cap_{0};
   RefCount ref_count_;
+  MemoryPool& pool_{MemoryPool::instance()};
 };
 
 }  // namespace boltdb

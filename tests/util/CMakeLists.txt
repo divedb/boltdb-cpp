@@ -15,3 +15,6 @@ target_link_libraries(format_test PRIVATE gtest)
 
 add_executable(crc64_test crc64_test.cpp)
 target_link_libraries(crc64_test PRIVATE boltdb gtest)
+
+add_executable(binary_test binary_test.cpp)
+target_link_libraries(binary_test PRIVATE boltdb gtest)

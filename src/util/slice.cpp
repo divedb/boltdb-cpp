@@ -9,19 +9,18 @@
 
 namespace boltdb {
 
-ByteSlice::ByteSlice() : data_(nullptr), size_(0), cap_(0) {}
-
 ByteSlice::ByteSlice(const Byte* data, std::size_t size) {
-  // TODO(gc): validate argument (NULL)
-  auto& pool = MemoryPool::instance();
+  assert(data != nullptr);
 
-  // Add extra 1 to termainate.
+  // Add 1 extra \0 to terminate.
   size_ = std::min(strlen(data), size);
   cap_ = round_up_to_power_of_two(size_ + 1);
-  data_ = pool.allocate(cap_);
+  data_ = pool_.allocate(cap_);
 
-  std::strncpy(data_, data, size);
+  std::strncpy(data_, data, size_);
 }
+
+ByteSlice::ByteSlice(std::size_t n, Byte v) : ByteSlice(std::string(n, v)) {}
 
 ByteSlice::ByteSlice(const Byte* data) : ByteSlice(data, strlen(data)) {}
 
@@ -48,21 +47,22 @@ ByteSlice& ByteSlice::append(Byte v) {
 
   data_[size_] = v;
   size_++;
+
+  return *this;
 }
 
 std::string ByteSlice::to_string() const { return {data_, size_}; }
 
 std::string ByteSlice::to_hex() const {
-  if (size() == 0) {
-    return "[]";
-  }
-
   std::ostringstream oss;
   oss << '[';
-  oss << std::hex << data_[0];
 
-  for (std::size_t i = 1; i < size_; i++) {
-    oss << ',' << std::hex << data_[i];
+  if (size() > 0) {
+    oss << std::hex << data_[0];
+
+    for (std::size_t i = 1; i < size_; i++) {
+      oss << ',' << std::hex << data_[i];
+    }
   }
 
   oss << ']';
@@ -70,11 +70,11 @@ std::string ByteSlice::to_hex() const {
   return oss.str();
 }
 
-// TODO(gc): release the reference count here.
+// Decrease the number of reference by 1.
+// Free the memory if this is the last observer.
 void ByteSlice::destroy() {
-  if (ref_count_.unique() && data_) {
-    MemoryPool::instance().deallocate(data_, cap_);
-    ref_count_.release();
+  if (data_ != nullptr && ref_count_.unique()) {
+    pool_.deallocate(data_, cap_);
   }
 }
 
@@ -86,14 +86,17 @@ void ByteSlice::copy(const ByteSlice& other) {
 }
 
 void ByteSlice::grow() {
-  std::size_t new_cap = std::max(1, cap_ * 2);
-
-  Byte* new_data = MemoryPool::instance().allocate(new_cap);
+  std::size_t new_cap = std::max(1UL, cap_ * 2);
+  Byte* new_data = pool_.allocate(new_cap);
   strncpy(new_data, data_, size_);
+
+  // We need to reset the reference count,
+  // since we allocate new memory for this ByteSlice.
   destroy();
+  ref_count_.reset();
 
   data_ = new_data;
-  cap_ = new_cap_;
+  cap_ = new_cap;
 }
 
 }  // namespace boltdb

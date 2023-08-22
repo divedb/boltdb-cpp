@@ -19,10 +19,14 @@ class RefCount {
   // Get the number of references to the object.
   int count() const { return *count_; }
 
+  // Reset reference count back to 1.
+  // This is becasuse `ByteSlice` may need to grow.
+  void reset();
+
+ private:
   // Releases the ownership of the managed object.
   void release();
 
- private:
   DISALLOW_MOVE(RefCount);
 
   void copy(const RefCount& other);

@@ -38,12 +38,12 @@ Status FileHandle::flock(int operation, double timeout) {
 
     // Check error first.
     if (res != EWOULDBLOCK) {
-      return Status(StatusType::kStatusErr, strerror(errno));
+      return {StatusType::kStatusErr, strerror(errno)};
     }
 
     // Check timeout.
     if (timeout > 0 && timer.is_timeout()) {
-      return Status(StatusType::kStatusErr, "Flock timeout");
+      return {StatusType::kStatusErr, "Flock timeout"};
     }
 
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
@@ -81,7 +81,7 @@ Status FileSystem::remove(FileHandle& handle) {
   int res = std::remove(path.c_str());
 
   if (res == -1) {
-    return Status(StatusType::kStatusErr, strerror(res));
+    return {StatusType::kStatusErr, strerror(res)};
   }
 
   return Status{};

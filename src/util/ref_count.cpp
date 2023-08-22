@@ -1,5 +1,7 @@
 #include "boltdb/util/ref_count.hpp"
 
+#include <assert.h>
+
 namespace boltdb {
 
 RefCount::RefCount() : count_(new int(1)) {}
@@ -20,10 +22,15 @@ RefCount& RefCount::operator=(const RefCount& other) {
 RefCount::~RefCount() { release(); }
 
 void RefCount::release() {
-  if (count_ != nullptr && --*count_ == 0) {
+  if (count_ && --*count_ == 0) {
     delete count_;
     count_ = nullptr;
   }
+}
+
+void RefCount::reset() {
+  release();
+  count_ = new int(1); 
 }
 
 void RefCount::copy(const RefCount& other) {

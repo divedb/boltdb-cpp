@@ -22,6 +22,9 @@ find_library(GMOCK_LIBRARIES
     NAME gmock
     PATHS ${GOOGMOCK_ROOT}/lib)
 
+message("GTEST_LIBRARIES = ${GTEST_LIBRARIES}")
+message("GMOCK_LIBRARIES = ${GMOCK_LIBRARIES}")
+
 if(NOT GTEST_LIBRARIES OR NOT GMOCK_LIBRARIES)
   message(STATUS "fetch GTest from https://github.com/google/googletest.git")
   include(FetchContent)

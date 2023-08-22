@@ -19,21 +19,33 @@ requires std::is_integral_v<T> T BigEndian::uint(ByteSlice slice) {
 
 template <typename T>
 requires std::is_integral_v<T>
-void BigEndian::put_uint(ByteSlice slice, T v) {
-  assert(slice.size() >= sizeof(T));
-
+void BigEndian::append_uint(ByteSlice slice, T v) {
   if constexpr (std::is_same_v<T, u8>) {
-    slice[0] = v;
+    slice.append(v);
   }
 
   if constexpr (std::is_same_v<T, u16>) {
-    slice[0] = Byte(v >> 8);
-    slice[1] = Byte(v);
+    slice.append(static_cast<Byte>(v >> 8));
+    slice.append(static_cast<Byte>(v));
+  }
+
+  if constexpr (std::is_same_v<T, u32>) {
+    slice.append(static_cast<Byte>(v >> 24));
+    slice.append(static_cast<Byte>(v >> 16));
+    slice.append(static_cast<Byte>(v >> 8));
+    slice.append(static_cast<Byte>(v));
+  }
+
+  if constexpr (std::is_same_v<T, u64>) {
+    slice.append(static_cast<Byte>(v >> 56));
+    slice.append(static_cast<Byte>(v >> 48));
+    slice.append(static_cast<Byte>(v >> 40));
+    slice.append(static_cast<Byte>(v >> 32));
+    slice.append(static_cast<Byte>(v >> 24));
+    slice.append(static_cast<Byte>(v >> 16));
+    slice.append(static_cast<Byte>(v >> 8));
+    slice.append(static_cast<Byte>(v));
   }
 }
-
-template <typename T>
-requires std::is_integral_v<T>
-static void BigEndian::append_uint(ByteSlice slice, T v);
 
 }  // namespace boltdb::binary

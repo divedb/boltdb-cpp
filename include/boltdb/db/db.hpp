@@ -67,15 +67,16 @@ class DB {
 class Meta {
  public:
   // Serialize the given meta object.
-  static std::vector<Byte> serialize(const Meta& meta);
+  static ByteSlice serialize(const Meta& meta);
 
-  static Meta deserialize();
+  // Deserialize meta from the given slice.
+  static Meta deserialize(ByteSlice slice);
 
   u32 magic;
   u32 version;
   u32 page_size;
   u32 flags;
-  bucket root;
+  BucketMeta root;
   PageID freelist;  // Freelist page id
   PageID pgid;      // Meta page id
   TxnID txid;       // Transaction id

@@ -10,7 +10,7 @@ namespace boltdb {
 
 class Page;
 class Node;
-class Transaction;
+class Txn;
 
 // Represents the on-file representation of a bucket.
 // This is stored as the "value" of a bucket key. If the bucket is small enough,
@@ -39,15 +39,15 @@ class Bucket {
   // This value can be changed by setting Bucket.FillPercent.
   static constexpr const f32 kDefaultFillPercent = 0.5;
 
-  Bucket(Transaction* txn);
+  Bucket(Txn* txn);
 
  private:
-  BucketMeta _bucket_meta;
-  Transaction* _txn;  // The associated transaction
-  std::map<std::string, Bucket*> _sub_buckets_cache;  // Subbucket cache
-  Page* _page;                                        // Inline page reference
-  Node* _root_node;                     // Materialized node for the root page
-  std::map<PageID, Node*> _node_cache;  // Node cache
+  BucketMeta bucket_meta_;
+  Txn* txn_;  // The associated transaction
+  std::map<std::string, Bucket*> sub_buckets_cache_;  // Subbucket cache
+  Page* page_;                                        // Inline page reference
+  Node* root_node_;                     // Materialized node for the root page
+  std::map<PageID, Node*> node_cache_;  // Node cache
 
   // Sets the threshold for filling nodes when they split. By default,
   // the bucket will fill to 50% but it can be useful to increase this
@@ -55,7 +55,7 @@ class Bucket {
   //
   // This is non-persisted across transactions so it must be set in every
   // transaction.
-  f64 _fill_percent;
+  f64 fill_percent_;
 };
 
 }  // namespace boltdb
