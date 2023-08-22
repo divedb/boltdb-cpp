@@ -65,6 +65,8 @@ class ByteSlice {
     return data_[index];
   }
 
+  std::span<Byte> span() const { return {data_, size_}; }
+
  private:
   void destroy();
   void copy(const ByteSlice& other);

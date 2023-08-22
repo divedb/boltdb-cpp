@@ -49,7 +49,7 @@ class BigEndian {
              static_cast<UnsignedT>(data[3] << 32) | 
              static_cast<UnsignedT>(data[2] << 40) | 
              static_cast<UnsignedT>(data[1] << 48) | 
-             static_cast<UnsignedT>(data[40 << 56);
+             static_cast<UnsignedT>(data[0] << 56);
     }
   }
 
