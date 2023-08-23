@@ -40,6 +40,8 @@ void DB::init() const {
 
   // Write an empty leaf page at page 4.
   pages.push_back(Page{3, PageFlag::kLeaf, page_size_});
+
+  // Write the first 4 pages to the data file.
 }
 
 /*
@@ -148,7 +150,7 @@ void Meta::compute_checksum() {
 
 void Meta::write(ByteSlice& slice) const {
   write_without_checksum(slice);
-  binary::BigEndian::append_uint(slice, checksum);
+  slice = binary::BigEndian::append_uint(slice, checksum);
 }
 
 void Meta::write_without_checksum(ByteSlice& slice) const {
