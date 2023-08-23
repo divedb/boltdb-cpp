@@ -54,20 +54,34 @@ ByteSlice& ByteSlice::append(Byte v) {
 std::string ByteSlice::to_string() const { return {data_, size_}; }
 
 std::string ByteSlice::to_hex() const {
-  std::ostringstream oss;
-  oss << '[';
+  //   std::ostringstream oss;
+  //   oss << '[';
+
+  //   if (size() > 0) {
+  //     oss << std::hex << data_[0];
+
+  //     for (std::size_t i = 1; i < size_; i++) {
+  //       oss << ',' << std::hex << data_[i];
+  //     }
+  //   }
+
+  //   oss << ']';
+
+  //   return oss.str();
+
+  std::string hex = "[";
 
   if (size() > 0) {
-    oss << std::hex << data_[0];
+    hex += format("0x%02hhx", data_[0]);
 
     for (std::size_t i = 1; i < size_; i++) {
-      oss << ',' << std::hex << data_[i];
+      hex += "," + format("0x%02hhx", data_[i]);
     }
   }
 
-  oss << ']';
+  hex += "]";
 
-  return oss.str();
+  return hex;
 }
 
 // Decrease the number of reference by 1.

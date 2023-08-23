@@ -102,7 +102,19 @@ TEST(ByteSliceTest, Span) {
   std::span<Byte> sp = slice.span();
 
   EXPECT_EQ(0x61, sp[0]);
-  EXPECT_EQ(0x62, sp[1]); 
+  EXPECT_EQ(0x62, sp[1]);
+}
+
+TEST(ByteSliceTest, ToHex) {
+  ByteSlice slice;
+
+  EXPECT_EQ("[]", slice.to_hex());
+
+  slice.append('a');
+  EXPECT_EQ("[0x61]", slice.to_hex());
+
+  slice.append('b');
+  EXPECT_EQ("[0x61,0x62]", slice.to_hex());
 }
 
 int main(int argc, char** argv) {
