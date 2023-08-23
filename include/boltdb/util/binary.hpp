@@ -24,32 +24,33 @@ class BigEndian {
   requires std::is_integral_v<T>
   static std::make_unsigned_t<T> uint(std::span<Byte> data) {
     using UnsignedT = std::make_unsigned_t<T>;
+    using UByte = std::make_unsigned_t<T>;
 
     if constexpr (std::is_same_v<T, i8> || std::is_same_v<T, u8>) {
-      return static_cast<UnsignedT>(data[0]);
+      return static_cast<UnsignedT>(static_cast<UByte>(data[0]));
     }
 
     if constexpr (std::is_same_v<T, i16> || std::is_same_v<T, u16>) {
-      return static_cast<UnsignedT>(data[1]) |
-             (static_cast<UnsignedT>(data[0]) << 8);
+      return static_cast<UnsignedT>(static_cast<UByte>(data[1])) |
+             (static_cast<UnsignedT>(static_cast<UByte>(data[0])) << 8);
     }
 
     if constexpr (std::is_same_v<T, i32> || std::is_same_v<T, u32>) {
-      return static_cast<UnsignedT>(data[3]) |
-             (static_cast<UnsignedT>(data[2]) << 8) |
-             (static_cast<UnsignedT>(data[1]) << 16) |
-             (static_cast<UnsignedT>(data[0]) << 24);
+      return static_cast<UnsignedT>(static_cast<UByte>(data[3])) |
+             (static_cast<UnsignedT>(static_cast<UByte>(data[2])) << 8) |
+             (static_cast<UnsignedT>(static_cast<UByte>(data[1])) << 16) |
+             (static_cast<UnsignedT>(static_cast<UByte>(data[0])) << 24);
     }
 
     if constexpr (std::is_same_v<T, i64> || std::is_same_v<T, u64>) {
-      return static_cast<UnsignedT>(data[7]) |
-             (static_cast<UnsignedT>(data[6]) << 8) |
-             (static_cast<UnsignedT>(data[5]) << 16) |
-             (static_cast<UnsignedT>(data[4]) << 24) |
-             (static_cast<UnsignedT>(data[3]) << 32) |
-             (static_cast<UnsignedT>(data[2]) << 40) |
-             (static_cast<UnsignedT>(data[1]) << 48) |
-             (static_cast<UnsignedT>(data[0]) << 56);
+      return static_cast<UnsignedT>(static_cast<UByte>(data[7])) |
+             (static_cast<UnsignedT>(static_cast<UByte>(data[6])) << 8) |
+             (static_cast<UnsignedT>(static_cast<UByte>(data[5])) << 16) |
+             (static_cast<UnsignedT>(static_cast<UByte>(data[4])) << 24) |
+             (static_cast<UnsignedT>(static_cast<UByte>(data[3])) << 32) |
+             (static_cast<UnsignedT>(static_cast<UByte>(data[2])) << 40) |
+             (static_cast<UnsignedT>(static_cast<UByte>(data[1])) << 48) |
+             (static_cast<UnsignedT>(static_cast<UByte>(data[0])) << 56);
     }
   }
 
