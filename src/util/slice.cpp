@@ -102,10 +102,12 @@ void ByteSlice::copy(const ByteSlice& other) {
 void ByteSlice::grow() {
   std::size_t new_cap = std::max(1UL, cap_ * 2);
   Byte* new_data = pool_.allocate(new_cap);
-  strncpy(new_data, data_, size_);
 
-  // We need to reset the reference count,
-  // since we allocate new memory for this ByteSlice.
+  // Binary data may contain \0.
+  // Hence strcpy may not work.
+  memcpy(new_data, data_, size_);
+
+  // Reset the reference count since slice point to new memory.
   destroy();
   ref_count_.reset();
 

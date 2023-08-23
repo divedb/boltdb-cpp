@@ -59,23 +59,25 @@ class BigEndian {
   static void put_uint(ByteSlice slice, T v) {
     assert(slice.size() >= sizeof(T));
 
-    if constexpr (std::is_same_v<T, i8> || std::is_same_v<T, u8>) {
+    using UnsignedT = std::make_unsigned_t<T>;
+
+    if constexpr (std::is_same_v<UnsignedT, u8>) {
       slice[0] = static_cast<Byte>(v);
     }
 
-    if constexpr (std::is_same_v<T, i16> || std::is_same_v<T, u16>) {
+    if constexpr (std::is_same_v<UnsignedT, u16>) {
       slice[0] = static_cast<Byte>(v >> 8);
       slice[1] = static_cast<Byte>(v);
     }
 
-    if constexpr (std::is_same_v<T, i32> || std::is_same_v<T, u32>) {
+    if constexpr (std::is_same_v<UnsignedT, u32>) {
       slice[0] = static_cast<Byte>(v >> 24);
       slice[1] = static_cast<Byte>(v >> 16);
       slice[2] = static_cast<Byte>(v >> 8);
       slice[3] = static_cast<Byte>(v);
     }
 
-    if constexpr (std::is_same_v<T, i64> || std::is_same_v<T, u64>) {
+    if constexpr (std::is_same_v<UnsignedT, u64>) {
       slice[0] = static_cast<Byte>(v >> 56);
       slice[1] = static_cast<Byte>(v >> 48);
       slice[2] = static_cast<Byte>(v >> 40);
