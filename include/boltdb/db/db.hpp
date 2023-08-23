@@ -5,14 +5,14 @@
 #include <memory>
 #include <vector>
 
-#include "boltdb/storage/page.hpp"
+#include "boltdb/fs/file_system.hpp"
 #include "boltdb/storage/bucket.hpp"
+#include "boltdb/storage/page.hpp"
 #include "boltdb/transaction/txn.hpp"
 #include "boltdb/util/common.hpp"
 #include "boltdb/util/options.hpp"
 #include "boltdb/util/status.hpp"
 #include "boltdb/util/types.hpp"
-#include "boltdb/fs/file_system.hpp"
 
 namespace boltdb {
 
@@ -30,17 +30,15 @@ class Meta {
 
   // Write meta information to the specified slice.
   // This does *include* the checksum field.
-  void write_with_checksum(ByteSlice& slice) const;
-
-  // Write meta information to the specified slice.
-  // This does *exclude* the checksum field.
-  void write_without_checksum(ByteSlice& slice) const;
+  void write(ByteSlice& slice) const;
 
   bool equals(const Meta& rhs) const {
-    return magic == rhs.magic && version == rhs.version && page_size == rhs.page_size && flags == rhs.flags &&
-      root.root == rhs.root.root && root.sequence == rhs.root.sequence && freelist == rhs.freelist && pgid == rhs.pgid &&
-      txid == rhs.txid && checksum == rhs.checksum;
-  } 
+    return magic == rhs.magic && version == rhs.version &&
+           page_size == rhs.page_size && flags == rhs.flags &&
+           root.root == rhs.root.root && root.sequence == rhs.root.sequence &&
+           freelist == rhs.freelist && pgid == rhs.pgid && txid == rhs.txid &&
+           checksum == rhs.checksum;
+  }
 
   u32 magic;
   u32 version;
@@ -51,8 +49,12 @@ class Meta {
   PageID pgid;      // Meta page id
   TxnID txid;       // Transaction id
   u64 checksum;
-};
 
+ private:
+  // Write meta information to the specified slice.
+  // This does *exclude* the checksum field.
+  void write_without_checksum(ByteSlice& slice) const;
+};
 
 // DB represents a collection of buckets persisted to a file on disk.
 // All data access is performed through transactions which can be obtained
@@ -89,7 +91,7 @@ class DB {
 
   std::unique_ptr<FileHandle> file_handle_;
   Options options_;
-  
+
   FileHandle* lock_file_;  // windows only
   Byte* dataref_;          // mmap'ed readonly, write throws SEGV
   int data_size_;

@@ -13,7 +13,7 @@ namespace boltdb::binary {
 class BigEndian {
  public:
   template <typename T>
-    requires std::is_integral_v<T>
+  requires std::is_integral_v<T>
   static std::make_unsigned_t<T> uint(ByteSlice slice) {
     return uint<T>(slice.span());
   }
@@ -21,7 +21,7 @@ class BigEndian {
   // TODO(gc): makes API not consistent, any better way to make `ByteSlice` to
   // consume bytes after `uint` call.
   template <typename T>
-    requires std::is_integral_v<T>
+  requires std::is_integral_v<T>
   static std::make_unsigned_t<T> uint(std::span<Byte> data) {
     using UnsignedT = std::make_unsigned_t<T>;
 
@@ -54,7 +54,7 @@ class BigEndian {
   }
 
   template <typename T>
-    requires std::is_integral_v<T>
+  requires std::is_integral_v<T>
   static void put_uint(ByteSlice slice, T v) {
     assert(slice.size() >= sizeof(T));
 
@@ -87,7 +87,7 @@ class BigEndian {
   }
 
   template <typename T>
-    requires std::is_integral_v<T>
+  requires std::is_integral_v<T>
   static ByteSlice append_uint(ByteSlice slice, T v) {
     if constexpr (std::is_same_v<T, i8> || std::is_same_v<T, u8>) {
       return slice.append(static_cast<Byte>(v));
@@ -116,6 +116,14 @@ class BigEndian {
           .append(static_cast<Byte>(v));
     }
   }
+
+  //   template <typename... Integers>
+  //   requires std::conjunction_v<std::is_same_v<Integers>...>
+  //   static ByteSlice append_variadic_uint(ByteSlice slice, Integers...
+  //   integers) {
+  //     (..., (slice = append_uint(slice, integers)));
+  //     return slice;
+  //   }
 };
 
 }  // namespace boltdb::binary

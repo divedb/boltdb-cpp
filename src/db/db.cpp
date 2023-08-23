@@ -98,7 +98,7 @@ void DB::move_aux(DB&& other) noexcept {
 ByteSlice Meta::serialize(const Meta& meta) {
   ByteSlice slice;
 
-  meta.write_with_checksum(slice);
+  meta.write(slice);
 
   return slice;
 }
@@ -137,22 +137,21 @@ void Meta::compute_checksum() {
   checksum = crc64_be(0, slice.data(), slice.size());
 }
 
-void Meta::write_with_checksum(ByteSlice& slice) const {
+void Meta::write(ByteSlice& slice) const {
   write_without_checksum(slice);
   binary::BigEndian::append_uint(slice, checksum);
 }
 
 void Meta::write_without_checksum(ByteSlice& slice) const {
-  binary::BigEndian::append_uint(slice, magic);
-  binary::BigEndian::append_uint(slice, version);
-  binary::BigEndian::append_uint(slice, page_size);
-  binary::BigEndian::append_uint(slice, flags);
-  binary::BigEndian::append_uint(slice, root.root);
-  binary::BigEndian::append_uint(slice, root.sequence);
-  binary::BigEndian::append_uint(slice, freelist);
-  binary::BigEndian::append_uint(slice, pgid);
-  binary::BigEndian::append_uint(slice, txid);
+  slice = binary::BigEndian::append_uint(slice, magic);
+  slice = binary::BigEndian::append_uint(slice, version);
+  slice = binary::BigEndian::append_uint(slice, page_size);
+  slice = binary::BigEndian::append_uint(slice, flags);
+  slice = binary::BigEndian::append_uint(slice, root.root);
+  slice = binary::BigEndian::append_uint(slice, root.sequence);
+  slice = binary::BigEndian::append_uint(slice, freelist);
+  slice = binary::BigEndian::append_uint(slice, pgid);
+  slice = binary::BigEndian::append_uint(slice, txid);
 }
-
 
 }  // namespace boltdb
