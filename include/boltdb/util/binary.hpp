@@ -24,7 +24,7 @@ class BigEndian {
   requires std::is_integral_v<T>
   static std::make_unsigned_t<T> uint(std::span<Byte> data) {
     using UnsignedT = std::make_unsigned_t<T>;
-    using UByte = std::make_unsigned_t<T>;
+    using UByte = std::make_unsigned_t<Byte>;
 
     if constexpr (std::is_same_v<T, i8> || std::is_same_v<T, u8>) {
       return static_cast<UnsignedT>(static_cast<UByte>(data[0]));
