@@ -15,11 +15,13 @@ DB::DB(DB&& other) noexcept { move_aux(other); }
 
 void DB::init() const {
   std::vector<Page> pages;
-  std::ostringstream oss;
 
+  // Create two meta pages.
   for (int i = 0; i < 2; i++) {
     Page page(i, PageFlag::kMeta, page_size_);
     Meta* meta = page.meta();
+
+    // Initialize the meta page.
     meta->magic = kMagic;
     meta->version = kVersion;
     meta->page_size = page_size_;
@@ -28,9 +30,16 @@ void DB::init() const {
     meta->root = {.root = 3, .sequence = 0};
     meta->pgid = i;
     meta->txid = i;
+    meta->compute_checksum();
 
     pages.push_back(page);
   }
+
+  // Write an empty freelist at page 3.
+  pages.push_back(Page{2, PageFlag::kFreeList, page_size_});
+
+  // Write an empty leaf page at page 4.
+  pages.push_back(Page{3, PageFlag::kLeaf, page_size_});
 }
 
 /*

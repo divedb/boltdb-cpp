@@ -6,9 +6,9 @@
 #include <cerrno>
 #include <chrono>
 #include <cstdio>
+#include <cstring>
 #include <string>
 #include <thread>
-#include <cstring>
 
 #include "boltdb/util/timer.hpp"
 
@@ -23,14 +23,17 @@ FileHandle::~FileHandle() noexcept {
     }
   }
 
-  close(fd_);
+  // close(fd_);
+
+  fclose(fp_);
 }
 
 Status FileHandle::flock(int operation, double timeout) {
   Timer timer(timeout);
+  int fd = fd();
 
   while (true) {
-    int res = ::flock(fd_, operation);
+    int res = ::flock(fd, operation);
 
     if (res == 0) {
       break;
@@ -52,6 +55,10 @@ Status FileHandle::flock(int operation, double timeout) {
   flocked_ = true;
 
   return Status{};
+}
+
+Status FileHandle::write_at(ByteSlice slice, std::size_t offset) {
+  int res = std::fseek(fp_, offset, SEEK_);
 }
 
 std::unique_ptr<FileHandle> FileSystem::create(const char* path) noexcept {

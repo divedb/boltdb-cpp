@@ -9,6 +9,7 @@
 #include <memory>
 #include <string>
 
+#include "boltdb/util/slice.hpp"
 #include "boltdb/util/status.hpp"
 #include "boltdb/util/types.hpp"
 
@@ -22,7 +23,7 @@ class FileHandle {
   explicit FileHandle(int fd, const char* path) : fd_(fd), path_(path) {}
   ~FileHandle() noexcept;
 
-  [[nodiscard]] int fd() const { return fd_; }
+  [[nodiscard]] int fd() const { return std::fileno(fp_); }
   [[nodiscard]] std::string path() const { return path_; }
 
   // Applies or removes an advisory lock on the file associated with the file
@@ -45,9 +46,14 @@ class FileHandle {
   //  Processes blocked awaiting a lock may be awakened by signals.
   [[nodiscard]] Status flock(int operation, double timeout_s);
 
+  // Write slice starting from the given offset.
+  // Return `StatusOK` if successful `StatusErr` otherwise.
+  Status write_at(ByteSlice slice, std::size_t offset);
+
  private:
   bool flocked_;
-  int fd_;
+  FILE* fp_;
+  // int fd_;
   std::string path_;
 };
 
