@@ -11,54 +11,79 @@
 #include <thread>
 
 #include "boltdb/util/timer.hpp"
+#include "util/exception.hpp"
+#include "util/util.hpp"
 
 namespace boltdb {
 
-FileHandle::~FileHandle() noexcept {
-  if (flocked_) {
-    // TODO(gc): fix this.
-    try {
-      (void)flock(LOCK_UN, 0);
-    } catch (...) {
+class UnixFileHandle : public FileHandle {
+ public:
+  UnixFileHandle(std::string path, int fd) : FileHandle(path), fd_(fd) {}
+
+  virtual ~UnixFileHandle() { close(); }
+
+  Status flock(int operation, double timeout_s) override {
+    Timer timer(timeout);
+
+    while (true) {
+      int res = ::flock(fd_, operation);
+
+      if (res == 0) {
+        break;
+      }
+
+      // Check error first.
+      if (res != EWOULDBLOCK) {
+        return {StatusType::kStatusErr, strerror(errno)};
+      }
+
+      // Check timeout.
+      if (timeout > 0 && timer.is_timeout()) {
+        return {StatusType::kStatusErr, "flock timeout"};
+      }
+
+      std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
+
+    flocked_ = true;
+
+    return {};
+  }
+
+  void close() override {
+    if (flocked_) {
+      flock(fd_, LOCK_UN);
+    }
+
+    if (fd_ != -1) {
+      close(fd_);
     }
   }
 
-  // close(fd_);
+  int fd() const { return fd_; }
 
-  fclose(fp_);
-}
+ private:
+  int fd_;
+  bool flocked_;
+};
 
-Status FileHandle::flock(int operation, double timeout) {
-  Timer timer(timeout);
-  int fd = fd();
-
-  while (true) {
-    int res = ::flock(fd, operation);
-
-    if (res == 0) {
-      break;
-    }
-
-    // Check error first.
-    if (res != EWOULDBLOCK) {
-      return {StatusType::kStatusErr, strerror(errno)};
-    }
-
-    // Check timeout.
-    if (timeout > 0 && timer.is_timeout()) {
-      return {StatusType::kStatusErr, "Flock timeout"};
-    }
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
-  }
-
-  flocked_ = true;
-
-  return Status{};
-}
-
+// TODO(gc): do we need to cache the `offset`. And if the offset is same with
+// current position, there is no need to fseek.
 Status FileHandle::write_at(ByteSlice slice, std::size_t offset) {
-  int res = std::fseek(fp_, offset, SEEK_);
+  int res = std::fseek(fp_, offset, SEEK_SET);
+
+  if (res != 0) {
+    return {StatusType::kStatusErr, format("fseek: %s", strerror(errno))};
+  }
+
+  std::size_t size = slice.size();
+  std::size_t nbytes = fwrite(slice.data(), sizeof(Byte), size, fp_);
+
+  if (nbytes != size) {
+    return {StatusType::kStatusErr, format("fwrite: %ld/%ld", nbytes, size};
+  }
+
+  return {};
 }
 
 std::unique_ptr<FileHandle> FileSystem::create(const char* path) noexcept {
@@ -73,7 +98,7 @@ std::unique_ptr<FileHandle> FileSystem::open(const char* path, int oflag,
     return nullptr;
   }
 
-  return std::make_unique<FileHandle>(fd, path);
+  return std::make_unique<UnixFileHandle>(fd, path);
 }
 
 bool FileSystem::exists(FileHandle& handle) {
@@ -104,6 +129,16 @@ std::uintmax_t FileSystem::file_size(FileHandle& handle) {
   }
 
   return st.st_size;
+}
+
+void FileSystem::set_file_pointer(FileHandle& handle, std::size_t offset) {
+  int fd = static_cast<UnixFileHandle&>(handle).fd();
+  off_t offset = lseek(fd, offset, SEEK_SET);
+
+  if (offset == static_cast<off_t>(-1)) {
+    std::message error = format("Could not seek to location %lld for file \"%s\": %s", offset, handle.path.c_str(),
+      strerror(errno)));
+  }
 }
 
 }  // namespace boltdb

@@ -15,16 +15,34 @@
 
 namespace boltdb {
 
+class FileSystem;
+
 // This is a basic abstraction of file handle.
 // Since we need flock on the specified file based on the file descriptor
 // it seems no portable way to get file descriptor from `ifstream`.
 class FileHandle {
  public:
-  explicit FileHandle(int fd, const char* path) : fd_(fd), path_(path) {}
-  ~FileHandle() noexcept;
+  explicit FileHandle(std::string path) : path(std::move(path)) {}
 
-  [[nodiscard]] int fd() const { return std::fileno(fp_); }
-  [[nodiscard]] std::string path() const { return path_; }
+  virtual ~FileHandle() {}
+
+  Status read(ByteSlice& slice, std::size_t offset);
+
+  // Write slice starting from the given offset.
+  // Return `StatusOK` if successful `StatusErr` otherwise.
+  Status write(ByteSlice slice, std::size_t offset);
+
+  // fdatasync() is similar to fsync(), but does not flush modified metadata
+  // unless that metadata is needed order to allow a subsequent data retrieval
+  // to be correctly handled. For example, changes to `st_atime`or `st_mtime`
+  // (respectively, time of last access and time of last modification; see
+  // inode(7)) do not require flushing because not necessary for a subsequent
+  // data read to be handled correctly. On the other hand, a change to the file
+  // size (`st_size`, as made by say `ftruncate(2)`), would require a metadata
+  // flush.
+  Status fdatasync();
+
+  virtual void close() = 0;
 
   // Applies or removes an advisory lock on the file associated with the file
   // descriptor fd.
@@ -44,17 +62,9 @@ class FileHandle {
   //  the parent will lose its lock.
   //
   //  Processes blocked awaiting a lock may be awakened by signals.
-  [[nodiscard]] Status flock(int operation, double timeout_s);
+  [[nodiscard]] Status flock(int operation, double timeout_s) = 0;
 
-  // Write slice starting from the given offset.
-  // Return `StatusOK` if successful `StatusErr` otherwise.
-  Status write_at(ByteSlice slice, std::size_t offset);
-
- private:
-  bool flocked_;
-  FILE* fp_;
-  // int fd_;
-  std::string path_;
+  std::string path;
 };
 
 // The `FileSystem` class provides facilities for performing operations on file
@@ -85,6 +95,11 @@ class FileSystem {
   // Get size of the file and return -1 if failed.
   // TODO(gc): get size of directory
   static std::uintmax_t file_size(FileHandle& handle);
+
+ private:
+  // Set the file pointer of a file handle to a specified location.
+  // Reads and writes will happen from this location.
+  void set_file_pointer(FileHandle& handle, std::size_t offset);
 };
 
 }  // namespace boltdb
