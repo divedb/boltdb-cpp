@@ -14,13 +14,10 @@ std::string exception_type_to_string(ExceptionType type) {
 }
 
 Exception::Exception(std::string message)
-    : std::exception(),
-      type_(ExceptionType::kInvalid),
-      message_(std::move(message)) {}
+    : type_(ExceptionType::kInvalid), message_(std::move(message)) {}
 
 Exception::Exception(ExceptionType exception_type, std::string message)
-    : std::exception(),
-      type_(exception_type),
+    : type_(exception_type),
       message_(exception_type_to_string(type_) + ": " + message) {}
 
 const char* Exception::what() const noexcept { return message_.c_str(); }

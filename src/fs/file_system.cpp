@@ -10,21 +10,23 @@
 #include <string>
 #include <thread>
 
+#include "boltdb/util/exception.hpp"
 #include "boltdb/util/timer.hpp"
-#include "util/exception.hpp"
-#include "util/util.hpp"
+#include "boltdb/util/util.hpp"
 
 namespace boltdb {
 
-class UnixFileHandle : public FileHandle {
+class UnixFileHandle final : public FileHandle {
  public:
   UnixFileHandle(std::string path, int fd)
       : FileHandle(std::move(path)), fd_(fd) {}
 
-  virtual ~UnixFileHandle() { close(); }
+  ~UnixFileHandle() override { close(); }
 
   ssize_t read(void* out_buffer, std::size_t nbytes,
                std::size_t offset) override {
+    set_file_pointer(offset);
+
     ssize_t bytes_read = ::read(fd_, out_buffer, nbytes);
 
     if (bytes_read == -1) {
@@ -38,6 +40,8 @@ class UnixFileHandle : public FileHandle {
 
   ssize_t write(void* in_buffer, std::size_t nbytes,
                 std::size_t offset) override {
+    set_file_pointer(offset);
+
     ssize_t bytes_written = ::write(fd_, in_buffer, nbytes);
 
     if (bytes_written == -1) {
@@ -57,6 +61,17 @@ class UnixFileHandle : public FileHandle {
     if (fd_ != -1) {
       ::close(fd_);
     }
+  }
+
+  Status fdatasync() override {
+    int res = ::fdatasync(fd_);
+
+    if (res != 0) {
+      std::string error = format("fdatasync: %s", strerror(errno));
+      return {kStatusErr, error};
+    }
+
+    return {};
   }
 
   Status flock(int operation, double timeout_s) override {
@@ -90,6 +105,20 @@ class UnixFileHandle : public FileHandle {
   int fd() const { return fd_; }
 
  private:
+  // Set the file pointer of a file handle to a specified location.
+  // Reads and writes will happen from this location.
+  void set_file_pointer(std::size_t offset) const {
+    off_t result = lseek(fd_, offset, SEEK_SET);
+
+    if (result == static_cast<off_t>(-1)) {
+      std::string error =
+          format("Could not seek to location %lld for file \"%s\": %s", offset,
+                 path.c_str(), strerror(errno));
+
+      throw IOException(error);
+    }
+  }
+
   int fd_;
   bool flocked_;
 };
@@ -106,17 +135,17 @@ std::unique_ptr<FileHandle> FileSystem::open(const char* path, int oflag,
     return nullptr;
   }
 
-  return std::make_unique<UnixFileHandle>(fd, path);
+  return std::make_unique<UnixFileHandle>(path, fd);
 }
 
 bool FileSystem::exists(FileHandle& handle) {
-  std::string path = handle.path();
+  std::string path = handle.path;
 
   return access(path.c_str(), F_OK) == 0;
 }
 
 Status FileSystem::remove(FileHandle& handle) {
-  std::string path = handle.path();
+  std::string path = handle.path;
 
   int res = std::remove(path.c_str());
 
@@ -129,7 +158,7 @@ Status FileSystem::remove(FileHandle& handle) {
 
 std::uintmax_t FileSystem::file_size(FileHandle& handle) {
   struct stat st;
-  int fd = handle.fd();
+  int fd = static_cast<UnixFileHandle&>(handle).fd();
   int res = fstat(fd, &st);
 
   if (res == -1) {
@@ -137,19 +166,6 @@ std::uintmax_t FileSystem::file_size(FileHandle& handle) {
   }
 
   return st.st_size;
-}
-
-void FileSystem::set_file_pointer(FileHandle& handle, std::size_t offset) {
-  int fd = static_cast<UnixFileHandle&>(handle).fd();
-  off_t offset = lseek(fd, offset, SEEK_SET);
-
-  if (offset == static_cast<off_t>(-1)) {
-    std::string error =
-        format("Could not seek to location %lld for file \"%s\": %s", offset,
-               handle.path.c_str(), strerror(errno));
-
-    throw IOException(error);
-  }
 }
 
 }  // namespace boltdb

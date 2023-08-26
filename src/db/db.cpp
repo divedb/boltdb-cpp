@@ -36,10 +36,10 @@ void DB::init() const {
   }
 
   // Write an empty freelist at page 3.
-  pages.push_back(Page{2, PageFlag::kFreeList, page_size_});
+  pages.emplace_back(2, PageFlag::kFreeList, page_size_);
 
   // Write an empty leaf page at page 4.
-  pages.push_back(Page{3, PageFlag::kLeaf, page_size_});
+  pages.emplace_back(3, PageFlag::kLeaf, page_size_);
 
   // Write the first 4 pages to the data file.
 }

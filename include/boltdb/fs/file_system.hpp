@@ -29,8 +29,8 @@ class FileHandle {
   // Return the number of bytes have been read.
   virtual ssize_t read(void* out_buffer, std::size_t nbytes,
                        std::size_t offset) = 0;
-  virtual void write(void* in_buffer, std::size_t nbytes,
-                     std::size_t offset) = 0;
+  virtual ssize_t write(void* in_buffer, std::size_t nbytes,
+                        std::size_t offset) = 0;
   virtual void close() = 0;
 
   // fdatasync() is similar to fsync(), but does not flush modified metadata
@@ -94,11 +94,6 @@ class FileSystem {
   // Get size of the file and return -1 if failed.
   // TODO(gc): get size of directory
   static std::uintmax_t file_size(FileHandle& handle);
-
- private:
-  // Set the file pointer of a file handle to a specified location.
-  // Reads and writes will happen from this location.
-  void set_file_pointer(FileHandle& handle, std::size_t offset);
 };
 
 }  // namespace boltdb
