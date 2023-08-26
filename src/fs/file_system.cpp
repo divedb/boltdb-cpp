@@ -18,12 +18,49 @@ namespace boltdb {
 
 class UnixFileHandle : public FileHandle {
  public:
-  UnixFileHandle(std::string path, int fd) : FileHandle(path), fd_(fd) {}
+  UnixFileHandle(std::string path, int fd)
+      : FileHandle(std::move(path)), fd_(fd) {}
 
   virtual ~UnixFileHandle() { close(); }
 
+  ssize_t read(void* out_buffer, std::size_t nbytes,
+               std::size_t offset) override {
+    ssize_t bytes_read = ::read(fd_, out_buffer, nbytes);
+
+    if (bytes_read == -1) {
+      std::string error = format("Could not read from file \"%s\": %s",
+                                 path.c_str(), strerror(errno));
+      throw IOException(error);
+    }
+
+    return bytes_read;
+  }
+
+  ssize_t write(void* in_buffer, std::size_t nbytes,
+                std::size_t offset) override {
+    ssize_t bytes_written = ::write(fd_, in_buffer, nbytes);
+
+    if (bytes_written == -1) {
+      std::string error = format("Could not write file \"%s\": %s",
+                                 path.c_str(), strerror(errno));
+      throw IOException(error);
+    }
+
+    return bytes_written;
+  }
+
+  void close() override {
+    if (flocked_) {
+      flock(fd_, LOCK_UN);
+    }
+
+    if (fd_ != -1) {
+      ::close(fd_);
+    }
+  }
+
   Status flock(int operation, double timeout_s) override {
-    Timer timer(timeout);
+    Timer timer(timeout_s);
 
     while (true) {
       int res = ::flock(fd_, operation);
@@ -38,7 +75,7 @@ class UnixFileHandle : public FileHandle {
       }
 
       // Check timeout.
-      if (timeout > 0 && timer.is_timeout()) {
+      if (timeout_s > 0 && timer.is_timeout()) {
         return {StatusType::kStatusErr, "flock timeout"};
       }
 
@@ -50,41 +87,12 @@ class UnixFileHandle : public FileHandle {
     return {};
   }
 
-  void close() override {
-    if (flocked_) {
-      flock(fd_, LOCK_UN);
-    }
-
-    if (fd_ != -1) {
-      close(fd_);
-    }
-  }
-
   int fd() const { return fd_; }
 
  private:
   int fd_;
   bool flocked_;
 };
-
-// TODO(gc): do we need to cache the `offset`. And if the offset is same with
-// current position, there is no need to fseek.
-Status FileHandle::write_at(ByteSlice slice, std::size_t offset) {
-  int res = std::fseek(fp_, offset, SEEK_SET);
-
-  if (res != 0) {
-    return {StatusType::kStatusErr, format("fseek: %s", strerror(errno))};
-  }
-
-  std::size_t size = slice.size();
-  std::size_t nbytes = fwrite(slice.data(), sizeof(Byte), size, fp_);
-
-  if (nbytes != size) {
-    return {StatusType::kStatusErr, format("fwrite: %ld/%ld", nbytes, size};
-  }
-
-  return {};
-}
 
 std::unique_ptr<FileHandle> FileSystem::create(const char* path) noexcept {
   return open(path, O_RDWR | O_CREAT | O_TRUNC, 0666);
@@ -136,8 +144,11 @@ void FileSystem::set_file_pointer(FileHandle& handle, std::size_t offset) {
   off_t offset = lseek(fd, offset, SEEK_SET);
 
   if (offset == static_cast<off_t>(-1)) {
-    std::message error = format("Could not seek to location %lld for file \"%s\": %s", offset, handle.path.c_str(),
-      strerror(errno)));
+    std::string error =
+        format("Could not seek to location %lld for file \"%s\": %s", offset,
+               handle.path.c_str(), strerror(errno));
+
+    throw IOException(error);
   }
 }
 

@@ -81,7 +81,7 @@ class DB {
   DISALLOW_COPY(DB);
 
   // Get the path to currently open database file.
-  [[nodiscard]] std::string path() const { return file_handle_->path(); }
+  [[nodiscard]] std::string path() const { return file_handle_->path; }
 
  private:
   void move_aux(DB&& other) noexcept;

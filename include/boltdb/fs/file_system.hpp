@@ -26,11 +26,12 @@ class FileHandle {
 
   virtual ~FileHandle() {}
 
-  Status read(ByteSlice& slice, std::size_t offset);
-
-  // Write slice starting from the given offset.
-  // Return `StatusOK` if successful `StatusErr` otherwise.
-  Status write(ByteSlice slice, std::size_t offset);
+  // Return the number of bytes have been read.
+  virtual ssize_t read(void* out_buffer, std::size_t nbytes,
+                       std::size_t offset) = 0;
+  virtual void write(void* in_buffer, std::size_t nbytes,
+                     std::size_t offset) = 0;
+  virtual void close() = 0;
 
   // fdatasync() is similar to fsync(), but does not flush modified metadata
   // unless that metadata is needed order to allow a subsequent data retrieval
@@ -40,9 +41,7 @@ class FileHandle {
   // data read to be handled correctly. On the other hand, a change to the file
   // size (`st_size`, as made by say `ftruncate(2)`), would require a metadata
   // flush.
-  Status fdatasync();
-
-  virtual void close() = 0;
+  virtual Status fdatasync() = 0;
 
   // Applies or removes an advisory lock on the file associated with the file
   // descriptor fd.
@@ -62,7 +61,7 @@ class FileHandle {
   //  the parent will lose its lock.
   //
   //  Processes blocked awaiting a lock may be awakened by signals.
-  [[nodiscard]] Status flock(int operation, double timeout_s) = 0;
+  virtual Status flock(int operation, double timeout_s) = 0;
 
   std::string path;
 };
