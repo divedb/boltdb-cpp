@@ -29,7 +29,7 @@ class FileHandle {
   // Return the number of bytes have been read.
   virtual ssize_t read(void* out_buffer, std::size_t nbytes,
                        std::size_t offset) = 0;
-  virtual ssize_t write(void* in_buffer, std::size_t nbytes,
+  virtual ssize_t write(const void* in_buffer, std::size_t nbytes,
                         std::size_t offset) = 0;
   virtual void close() = 0;
 

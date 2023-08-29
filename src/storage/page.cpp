@@ -4,6 +4,7 @@
 #include <sstream>
 #include <type_traits>
 
+#include "boltdb/util/binary.hpp"
 #include "boltdb/util/util.hpp"
 
 namespace boltdb {
@@ -18,6 +19,9 @@ template <typename T>
 Byte* advance_n_bytes(const T* p, std::size_t n) {
   return advance_n_bytes(const_cast<T*>(p), n);
 }
+
+Page::Page(PageID pid, PageFlag flag, int page_size)
+    : flag_(flag), pid_(pid), pdata_(page_size) {}
 
 inline Byte* Page::skip_page_header() const {
   return advance_n_bytes(pdata_.data(), kPageHeaderSize);

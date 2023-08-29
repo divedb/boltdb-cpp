@@ -11,7 +11,7 @@ enum StatusType : i8 { kStatusOK, kStatusErr, kStatusCorrupt };
 
 class Status {
  public:
-  Status() : status_type_(StatusType::kStatusOK) {}
+  Status() = default;
   Status(StatusType status_type, std::string message)
       : status_type_(status_type), message_(std::move(message)) {}
 
@@ -19,7 +19,13 @@ class Status {
   // Get true if the status type is `kStatusOK`, otherwise false.
   explicit operator bool() const { return status_type_ == kStatusOK; }
 
-  [[nodiscard]] StatusType status_type() const { return status_type_; }
+  // Get status type.
+  StatusType status_type() const { return status_type_; }
+
+  // Get error information if the status is not OK.
+  std::string error() const { return message_; }
+
+  bool ok() const { return status_type_ == kStatusOK; }
 
   // Debug.
   friend std::ostream& operator<<(std::ostream& os, const Status& status) {
@@ -40,8 +46,8 @@ class Status {
   }
 
  private:
-  StatusType status_type_;
-  std::string message_;
+  StatusType status_type_{StatusType::kStatusOK};
+  std::string message_{};
 };
 
 }  // namespace boltdb

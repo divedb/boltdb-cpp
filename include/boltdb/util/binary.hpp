@@ -13,16 +13,16 @@ namespace boltdb::binary {
 class BigEndian {
  public:
   template <typename T>
-  requires std::is_integral_v<T>
-  static std::make_unsigned_t<T> uint(ByteSlice slice) {
+  requires std::is_integral_v<T> static std::make_unsigned_t<T> uint(
+      ByteSlice slice) {
     return uint<T>(slice.span());
   }
 
   // TODO(gc): makes API not consistent, any better way to make `ByteSlice` to
   // consume bytes after `uint` call.
   template <typename T>
-  requires std::is_integral_v<T>
-  static std::make_unsigned_t<T> uint(std::span<Byte> data) {
+  requires std::is_integral_v<T> static std::make_unsigned_t<T> uint(
+      std::span<Byte> data) {
     using UnsignedT = std::make_unsigned_t<T>;
     using UByte = std::make_unsigned_t<Byte>;
 
@@ -55,43 +55,48 @@ class BigEndian {
   }
 
   template <typename T>
-  requires std::is_integral_v<T>
-  static void put_uint(ByteSlice slice, T v) {
-    assert(slice.size() >= sizeof(T));
+  requires std::is_integral_v<T> static void put_uint(std::span<Byte> data,
+                                                      T v) {
+    assert(data.size() >= sizeof(T));
 
     using UnsignedT = std::make_unsigned_t<T>;
 
     if constexpr (std::is_same_v<UnsignedT, u8>) {
-      slice[0] = static_cast<Byte>(v);
+      data[0] = static_cast<Byte>(v);
     }
 
     if constexpr (std::is_same_v<UnsignedT, u16>) {
-      slice[0] = static_cast<Byte>(v >> 8);
-      slice[1] = static_cast<Byte>(v);
+      data[0] = static_cast<Byte>(v >> 8);
+      data[1] = static_cast<Byte>(v);
     }
 
     if constexpr (std::is_same_v<UnsignedT, u32>) {
-      slice[0] = static_cast<Byte>(v >> 24);
-      slice[1] = static_cast<Byte>(v >> 16);
-      slice[2] = static_cast<Byte>(v >> 8);
-      slice[3] = static_cast<Byte>(v);
+      data[0] = static_cast<Byte>(v >> 24);
+      data[1] = static_cast<Byte>(v >> 16);
+      data[2] = static_cast<Byte>(v >> 8);
+      data[3] = static_cast<Byte>(v);
     }
 
     if constexpr (std::is_same_v<UnsignedT, u64>) {
-      slice[0] = static_cast<Byte>(v >> 56);
-      slice[1] = static_cast<Byte>(v >> 48);
-      slice[2] = static_cast<Byte>(v >> 40);
-      slice[3] = static_cast<Byte>(v >> 32);
-      slice[4] = static_cast<Byte>(v >> 24);
-      slice[5] = static_cast<Byte>(v >> 16);
-      slice[6] = static_cast<Byte>(v >> 8);
-      slice[7] = static_cast<Byte>(v);
+      data[0] = static_cast<Byte>(v >> 56);
+      data[1] = static_cast<Byte>(v >> 48);
+      data[2] = static_cast<Byte>(v >> 40);
+      data[3] = static_cast<Byte>(v >> 32);
+      data[4] = static_cast<Byte>(v >> 24);
+      data[5] = static_cast<Byte>(v >> 16);
+      data[6] = static_cast<Byte>(v >> 8);
+      data[7] = static_cast<Byte>(v);
     }
   }
 
   template <typename T>
-  requires std::is_integral_v<T>
-  static ByteSlice append_uint(ByteSlice slice, T v) {
+  requires std::is_integral_v<T> static void put_uint(ByteSlice slice, T v) {
+    put_uint(slice.span(), v);
+  }
+
+  template <typename T>
+  requires std::is_integral_v<T> static ByteSlice append_uint(ByteSlice slice,
+                                                              T v) {
     if constexpr (std::is_same_v<T, i8> || std::is_same_v<T, u8>) {
       return slice.append(static_cast<Byte>(v));
     }

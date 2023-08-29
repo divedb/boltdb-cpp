@@ -24,10 +24,10 @@ class RefCount {
   void reset();
 
  private:
+  DISALLOW_MOVE_AND_ASSIGN(RefCount);
+
   // Releases the ownership of the managed object.
   void release();
-
-  DISALLOW_MOVE(RefCount);
 
   void copy(const RefCount& other);
 

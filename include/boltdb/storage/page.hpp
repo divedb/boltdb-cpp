@@ -29,8 +29,7 @@ class BranchPageElement;
 // `meta`, `freelist`, `branch` and `leaf` pages.
 class Page {
  public:
-  Page(PageID pid, PageFlag flag, int page_size)
-      : flag_(flag), pid_(pid), pdata_(page_size) {}
+  Page(PageID pid, PageFlag flag, int page_size);
 
   // Get page flag.
   [[nodiscard]] PageFlag flag() const { return flag_; }
@@ -46,6 +45,12 @@ class Page {
 
   // Get a human readable page type string used for debugging.
   [[nodiscard]] std::string type() const;
+
+  // Get underlying page data.
+  const Byte* data() const { return pdata_.data(); }
+
+  // Get page size in bytes.
+  std::size_t page_size() const { return pdata_.size(); }
 
   // Get a pointer to the metadata section of the page.
   [[nodiscard]] Meta* meta() const;
@@ -68,11 +73,11 @@ class Page {
   template <typename T>
   T* cast_ptr() const;
 
-  PageFlag flag_;            // 2 bytes, identify page type
-  u16 count_{};              // 2 bytes
-  u32 overflow_{};           // 4 bytes, number of overflow pages
-  PageID pid_;               // 8 bytes, page id
-  std::vector<Byte> pdata_;  // Page data
+  PageFlag flag_;    // 2 bytes, identify page type
+  u16 count_{};      // 2 bytes
+  u32 overflow_{};   // 4 bytes, number of overflow pages
+  PageID pid_;       // 8 bytes, page id
+  ByteSlice pdata_;  // Page data
 };
 
 // BranchPageElement represents a node on a branch page.

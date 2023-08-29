@@ -6,14 +6,12 @@
 #include "boltdb/os/darwin.hpp"
 #include "boltdb/util/binary.hpp"
 #include "boltdb/util/crc64.hpp"
+#include "boltdb/util/exception.hpp"
+#include "boltdb/util/util.hpp"
 
 namespace boltdb {
 
-/*
-DB::DB(DB&& other) noexcept { move_aux(other); }
-*/
-
-void DB::init() const {
+Status DB::init() const {
   std::vector<Page> pages;
 
   // Create two meta pages.
@@ -42,42 +40,37 @@ void DB::init() const {
   pages.emplace_back(3, PageFlag::kLeaf, page_size_);
 
   // Write the first 4 pages to the data file.
-}
+  ssize_t offset = 0;
 
-/*
-DB& DB::operator=(DB&& other) noexcept {
-  move_aux(std::move(other));
+  try {
+    for (Page& page : pages) {
+      ssize_t bytes_written =
+          file_handle_->write(page.data(), page_size_, offset);
 
-  return *this;
-}
+      if (bytes_written != page_size_) {
+        std::string error =
+            format("write: expect written %d bytes, got %d bytes",
+                   bytes_written, page_size_);
+        return {kStatusCorrupt, error};
+      }
 
-void DB::move_aux(DB&& other) noexcept {
-  if (this == &other) {
-    return;
+      offset += page_size_;
+    }
+
+    file_handle_->fdatasync();
+  } catch (const IOException& e) {
+    return {kStatusErr, e.what()};
   }
 
-  // TODO(gc): fix move
-  options_ = other.options_;
-  file_handle_ = std::move(other.file_handle_);
-  lock_file_ = other.lock_file_;
-  dataref_ = other.dataref_;
-  data_size_ = other.data_size_;
-  file_size_ = other.file_size_;
-  meta0_ = other.meta0_;
-  meta1_ = other.meta1_;
-  page_size_ = other.page_size_;
-  opened_ = other.opened_;
-  rwtx_ = other.rwtx_;
-  txns_ = other.txns_;
+  return {};
 }
-*/
 
-[[nodiscard]] Status open(std::string path, int permission, Options options,
-                          DB** out_db) {
-  auto handle = FileSystem::open(path.c_str(), options.open_flag(), permission);
+Status open_db(std::string path, Options options, DB** out_db) {
+  auto handle = FileSystem::open(path.c_str(), options.open_flag() | O_CREAT,
+                                 options.permission());
 
   if (handle == nullptr) {
-    return {StatusType::kStatusErr, "Fail to open: " + path};
+    return {StatusType::kStatusErr, "error: fail to open " + path};
   }
 
   // Lock file so that other processes using Bolt in read-write mode cannot use
@@ -99,8 +92,17 @@ void DB::move_aux(DB&& other) noexcept {
     return status;
   }
 
-  if (FileSystem::file_size(*handle) == 0) {
+  std::unique_ptr<DB> db(new DB(std::move(handle), options));
+
+  if (FileSystem::file_size(*db->file_handle_) == 0) {
+    Status status = db->init();
+
+    if (!status.ok()) {
+      return status;
+    }
   }
+
+  *out_db = db.release();
 
   return {};
 }

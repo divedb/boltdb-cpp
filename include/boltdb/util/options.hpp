@@ -15,20 +15,26 @@ class Options {
   constexpr static const int kDefaultAllocSize = 16 * 1024 * 1024;
 
   // Accessor
-  [[nodiscard]] bool is_strict_mode() const { return strict_mode_; }
-  [[nodiscard]] bool is_no_sync() const { return no_sync_; }
-  [[nodiscard]] bool is_no_grow_sync() const { return no_grow_sync_; }
-  [[nodiscard]] bool is_read_only() const { return read_only_; }
+  bool is_strict_mode() const { return strict_mode_; }
+  bool is_no_sync() const { return no_sync_; }
+  bool is_no_grow_sync() const { return no_grow_sync_; }
+  bool is_read_only() const { return read_only_; }
 
-  [[nodiscard]] int open_flag() const { return open_flag_; }
-  [[nodiscard]] double timeout() const { return timeout_; }
-  [[nodiscard]] int mmap_flags() const { return mmapflags_; }
-  [[nodiscard]] int initial_mmap_size() const { return initial_mmap_size_; }
-  [[nodiscard]] int max_batch_size() const { return max_batch_size_; }
-  [[nodiscard]] int max_batch_delay() const { return max_batch_delay_; }
-  [[nodiscard]] int alloc_size() const { return alloc_size_; }
+  int permission() const { return permission_; }
+  int open_flag() const { return open_flag_; }
+  double timeout() const { return timeout_; }
+  int mmap_flags() const { return mmapflags_; }
+  int initial_mmap_size() const { return initial_mmap_size_; }
+  int max_batch_size() const { return max_batch_size_; }
+  int max_batch_delay() const { return max_batch_delay_; }
+  int alloc_size() const { return alloc_size_; }
 
   // Modifier
+  Options& set_permission(int permission) {
+    permission_ = permission;
+    return *this;
+  }
+
   Options& set_open_flag(int open_flag) {
     open_flag_ = open_flag;
     return *this;
@@ -109,6 +115,8 @@ class Options {
   // O_CLOEXEC: mark as close-on-exec
   // O_NOFOLLOW_ANY: do not follow symlinks in the entire path
   int open_flag_{O_RDWR};
+
+  int permission_{0666};
 
   // When enabled, the database will perform a Check() after every commit.
   // A panic is issued if the database is in an inconsistent state. This

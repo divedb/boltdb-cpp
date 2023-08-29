@@ -38,7 +38,7 @@ class UnixFileHandle final : public FileHandle {
     return bytes_read;
   }
 
-  ssize_t write(void* in_buffer, std::size_t nbytes,
+  ssize_t write(const void* in_buffer, std::size_t nbytes,
                 std::size_t offset) override {
     set_file_pointer(offset);
 

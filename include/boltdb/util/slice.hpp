@@ -3,6 +3,7 @@
 
 #include <assert.h>
 
+#include <algorithm>
 #include <cstddef>
 #include <span>
 #include <string>
@@ -21,55 +22,63 @@ class ByteSlice {
   // Construct an empty slice.
   ByteSlice() = default;
 
+  // Construct the slice from the given data.
+  // Note that, this supports construction from the binary data provided that
+  // the `size` is valid. That is, dereference *(bin_data + size) is valid.
+  ByteSlice(const Byte* bin_data, std::size_t size);
+
+  // Construct `ByteSlice` from the given data.
+  // Note that the `data` must be \0 terminated.
+  explicit ByteSlice(const Byte* cstring);
+  explicit ByteSlice(const std::string& data);
+
   // Construct the slice with `n` copies of byte `v`.
   ByteSlice(std::size_t n, Byte v = 0);
 
-  // Construct the slice from the given data.
-  // Note that, `size` should be in the range of [0, strlen(data)).
-  // This supports binary data.
-  ByteSlice(const Byte* data, std::size_t size);
-
-  // Construct `ByteSlice` from the given data.
-  explicit ByteSlice(const Byte* data);
-  explicit ByteSlice(const std::string& data);
-  ByteSlice(const ByteSlice& other) = default;
-
   ~ByteSlice();
 
-  // Copy assignment.
+  // Copy constructor and assignment.
+  ByteSlice(const ByteSlice& other) = default;
   ByteSlice& operator=(const ByteSlice& other);
 
   // Append a byte.
   ByteSlice& append(Byte v);
 
   // Get the number of reference to same byte slice.
-  [[nodiscard]] int ref_count() const { return ref_count_.count(); }
+  int ref_count() const { return ref_count_.count(); }
 
-  [[nodiscard]] std::size_t size() const { return size_; }
+  std::size_t size() const { return size_; }
 
   // Get a string representation of this byte slice.
-  [[nodiscard]] std::string to_string() const;
+  std::string to_string() const;
 
   // Get a hex string representation of this byte slice.
-  [[nodiscard]] std::string to_hex() const;
+  std::string to_hex() const;
 
   // Index access.
   Byte operator[](int index) const {
     assert(static_cast<std::size_t>(index) < size_);
 
-    return data_[index];
+    return cursor_[index];
   }
 
   Byte& operator[](int index) {
     assert(static_cast<std::size_t>(index) < size_);
 
-    return data_[index];
+    return cursor_[index];
   }
 
-  std::span<Byte> span() const { return {data_, size_}; }
+  // Advance n steps.
+  void advance(std::size_t n) {
+    assert(static_cast<std::size_t>(n) < size_);
+    size_ -= n;
+    std::advance(cursor_, n);
+  }
+
+  std::span<Byte> span() const { return {cursor_, size_}; }
 
   // Get a readable only view on this slice.
-  const Byte* data() const { return data_; }
+  const Byte* data() const { return cursor_; }
 
  private:
   void destroy();
@@ -77,6 +86,7 @@ class ByteSlice {
   void grow();
 
   Byte* data_{nullptr};
+  Byte* cursor_{nullptr};
   std::size_t size_{0};
   std::size_t cap_{0};
   RefCount ref_count_;

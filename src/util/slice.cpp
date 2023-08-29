@@ -16,16 +16,18 @@ ByteSlice::ByteSlice(const Byte* data, std::size_t size) {
   size_ = size;
   cap_ = round_up_to_power_of_two(size_ + 1);
   data_ = pool_.allocate(cap_);
+  cursor_ = data_;
 
   std::memcpy(data_, data, size_);
 }
 
-ByteSlice::ByteSlice(std::size_t n, Byte v) : ByteSlice(std::string(n, v)) {}
-
-ByteSlice::ByteSlice(const Byte* data) : ByteSlice(data, strlen(data)) {}
+ByteSlice::ByteSlice(const Byte* cstring)
+    : ByteSlice(cstring, strlen(cstring)) {}
 
 ByteSlice::ByteSlice(const std::string& data)
     : ByteSlice(data.c_str(), data.size()) {}
+
+ByteSlice::ByteSlice(std::size_t n, Byte v) : ByteSlice(std::string(n, v)) {}
 
 ByteSlice::~ByteSlice() { destroy(); }
 
@@ -45,13 +47,13 @@ ByteSlice& ByteSlice::append(Byte v) {
     grow();
   }
 
-  data_[size_] = v;
+  cursor_[size_] = v;
   size_++;
 
   return *this;
 }
 
-std::string ByteSlice::to_string() const { return {data_, size_}; }
+std::string ByteSlice::to_string() const { return {cursor_, size_}; }
 
 std::string ByteSlice::to_hex() const {
   //   std::ostringstream oss;
@@ -72,10 +74,10 @@ std::string ByteSlice::to_hex() const {
   std::string hex = "[";
 
   if (size() > 0) {
-    hex += format("0x%02hhx", data_[0]);
+    hex += format("0x%02hhx", cursor_[0]);
 
     for (std::size_t i = 1; i < size_; i++) {
-      hex += "," + format("0x%02hhx", data_[i]);
+      hex += "," + format("0x%02hhx", cursor_[i]);
     }
   }
 
@@ -94,6 +96,7 @@ void ByteSlice::destroy() {
 
 void ByteSlice::copy(const ByteSlice& other) {
   data_ = other.data_;
+  cursor_ = other.cursor_;
   size_ = other.size_;
   cap_ = other.cap_;
   ref_count_ = other.ref_count_;
@@ -102,6 +105,7 @@ void ByteSlice::copy(const ByteSlice& other) {
 void ByteSlice::grow() {
   std::size_t new_cap = std::max(1UL, cap_ * 2);
   Byte* new_data = pool_.allocate(new_cap);
+  ssize_t offset = std::distance(data_, cursor_);
 
   // Binary data may contain \0.
   // Hence strcpy may not work.
@@ -113,6 +117,8 @@ void ByteSlice::grow() {
 
   data_ = new_data;
   cap_ = new_cap;
+  cursor_ = data_;
+  std::advance(cursor_, offset);
 }
 
 }  // namespace boltdb

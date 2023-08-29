@@ -71,23 +71,30 @@ class DB {
   // Represents a marker value to indicate that a file is a Bolt DB.
   constexpr static const u32 kMagic = 0xED0CDAED;
 
-  DB(std::unique_ptr<FileHandle> file_handle, Options options)
-      : file_handle_(std::move(file_handle)), options_(options) {}
+  // TODO(gc): fix this and free memory
+  ~DB() {}
+
+  // Disallow copy and assignment constructor.
+  DB(const DB&) = delete;
+  DB& operator=(const DB&) = delete;
 
   // Move only.
   DB(DB&& other) noexcept;
   DB& operator=(DB&& other) noexcept;
 
-  DISALLOW_COPY(DB);
-
   // Get the path to currently open database file.
   [[nodiscard]] std::string path() const { return file_handle_->path; }
 
+  friend Status open_db(std::string path, Options options, DB** out_db);
+
  private:
+  DB(std::unique_ptr<FileHandle> file_handle, Options options)
+      : file_handle_(std::move(file_handle)), options_(options) {}
+
   void move_aux(DB&& other) noexcept;
 
   // Initialize the meta, freelist and root pages.
-  void init() const;
+  Status init() const;
 
   std::unique_ptr<FileHandle> file_handle_;
   Options options_;
@@ -106,8 +113,7 @@ class DB {
 
 // Open a database at the specified path.
 // If the file does not exist then it will be created automatically.
-[[nodiscard]] Status open(std::string path, int permission, Options options,
-                          DB** out_db);
+Status open_db(std::string path, Options options, DB** out_db);
 
 }  // namespace boltdb
 
