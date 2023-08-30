@@ -9,7 +9,12 @@ class RefCount {
  public:
   RefCount();
   RefCount(const RefCount& other);
+  RefCount(RefCount&& other);
+
   RefCount& operator=(const RefCount& other);
+  // Note that: self movement makes trouble.
+  // https://ericniebler.com/2017/03/31/post-conditions-on-self-move/
+  RefCount& operator=(RefCount&& other);
 
   ~RefCount();
 
@@ -17,21 +22,25 @@ class RefCount {
   bool unique() const { return count_ != nullptr && *count_ == 1; }
 
   // Get the number of references to the object.
-  int count() const { return *count_; }
+  int count() const {
+    if (count_ == nullptr) {
+      return 0;
+    }
 
-  // Reset reference count back to 1.
-  // This is becasuse `ByteSlice` may need to grow.
+    return *count_;
+  }
+
+  // Decrease the original counter by 1. If this is the last reference,
+  // release the associated memory. Then, reset the state back to the initial
+  // state, equivalent to the state after the default constructor is called.
   void reset();
 
  private:
-  DISALLOW_MOVE_AND_ASSIGN(RefCount);
+  void decrease_and_try_release();
+  void copy_from(const RefCount& other);
+  void move_from(RefCount&& other);
 
-  // Releases the ownership of the managed object.
-  void release();
-
-  void copy(const RefCount& other);
-
-  mutable int* count_;
+  mutable int* count_{};
 };
 
 }  // namespace boltdb

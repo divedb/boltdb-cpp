@@ -4,7 +4,7 @@
 
 using namespace boltdb;
 
-TEST(RefCountTest, Constructor) {
+TEST(RefCountTest, CopyConstructorAndAssignment) {
   RefCount ref1;
 
   EXPECT_EQ(1, ref1.count());
@@ -24,6 +24,26 @@ TEST(RefCountTest, Constructor) {
   EXPECT_EQ(2, ref3.count());
   EXPECT_EQ(1, ref2.count());
 }
+
+// TEST(RefCountTest, MoveConstructorAndAssignment) {
+//   RefCount ref1;
+//   RefCount ref2(std::move(ref1));
+
+//   EXPECT_EQ(0, ref1.count());
+//   EXPECT_EQ(1, ref2.count());
+
+//   // Move from valid but unspecified state.
+//   RefCount ref3;
+//   ref3 = ref1;
+
+//   EXPECT_EQ(0, ref1.count());
+//   EXPECT_EQ(0, ref3.count());
+
+//   // Again, move from valid state.
+//   ref3 = ref2;
+//   EXPECT_EQ(0, ref2.count());
+//   EXPECT_EQ(1, ref3.count());
+// }
 
 int main(int argc, char** argv) {
   ::testing::InitGoogleTest(&argc, argv);
