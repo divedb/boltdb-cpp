@@ -53,7 +53,7 @@ class ByteSlice {
   // Get the number of reference to same byte slice.
   int ref_count() const { return ref_count_.count(); }
 
-  std::size_t size() const { return size_; }
+  std::size_t size() const { return std::distance(head_, tail_); }
 
   // Get a string representation of this byte slice.
   std::string to_string() const;
@@ -65,38 +65,40 @@ class ByteSlice {
   Byte operator[](int index) const {
     assert(static_cast<std::size_t>(index) < size_);
 
-    return cursor_[index];
+    return head_[index];
   }
 
   Byte& operator[](int index) {
     assert(static_cast<std::size_t>(index) < size_);
 
-    return cursor_[index];
+    return head_[index];
   }
 
   // Advance n steps.
-  void advance(std::size_t n) {
-    assert(static_cast<std::size_t>(n) < size_);
-    size_ -= n;
-    std::advance(cursor_, n);
+  void remove_prefix(std::size_t n) {
+    assert(std::next(head_, n) < tail_);
+
+    head_ = std::next(head_, n);
   }
 
-  std::span<Byte> span() const { return {cursor_, size_}; }
+  std::span<Byte> span() const { return {head_, tail_}; }
 
   // Get a readable only view on this slice.
-  const Byte* data() const { return cursor_; }
+  const Byte* data() const { return head_; }
+
+  std::size_t cap() const { return std::distance(base_, cap_); }
 
  private:
   void clear();
   void try_deallocate();
   void copy_from(const ByteSlice& other) noexcept;
   void move_from(ByteSlice&& other) noexcept;
-  void grow();
+  void grow(std::size_t new_cap);
 
-  Byte* data_{nullptr};
-  Byte* cursor_{nullptr};
-  std::size_t size_{0};
-  std::size_t cap_{0};
+  Byte* base_{nullptr};
+  Byte* head_{nullptr};
+  Byte* tail_{nullptr};
+  Byte* cap_{nullptr};
   RefCount ref_count_;
 };
 

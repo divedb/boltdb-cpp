@@ -16,11 +16,11 @@ ByteSlice::ByteSlice(const Byte* data, std::size_t size) {
   assert(data != nullptr);
 
   // Add 1 extra \0 to terminate.
-  size_ = size;
-  cap_ = round_up_to_power_of_two(size_ + 1);
-  data_ = pool_.allocate(cap_);
-  cursor_ = data_;
-
+  size = round_up_to_power_of_two(size + 1);
+  base_ = pool_.allocate(size);
+  head_ = base_;
+  tail_ = head_;
+  cap_ = std::next(head_, cap_);
   std::memcpy(data_, data, size_);
 }
 
@@ -63,17 +63,17 @@ ByteSlice& ByteSlice::operator=(ByteSlice&& other) noexcept {
 }
 
 ByteSlice& ByteSlice::append(Byte v) {
-  if (size_ >= cap_) {
-    grow();
+  if (tail_ == cap_) {
+    std::size_t new_cap = std::max(1UL, cap() * 2);
+    grow(new_cap);
   }
 
-  cursor_[size_] = v;
-  size_++;
+  *tail_++ = v;
 
   return *this;
 }
 
-std::string ByteSlice::to_string() const { return {cursor_, size_}; }
+std::string ByteSlice::to_string() const { return {head_, size()}; }
 
 std::string ByteSlice::to_hex() const {
   //   std::ostringstream oss;
@@ -91,42 +91,34 @@ std::string ByteSlice::to_hex() const {
 
   //   return oss.str();
 
-  std::string hex = "[";
+  ostringstream hex;
+  transform(s3.begin(), s3.end(), ostream_iterator<Byte>{hex},
+            [](Byte c) { return format("0x%02hhx", c); });
 
-  if (size() > 0) {
-    hex += format("0x%02hhx", cursor_[0]);
-
-    for (std::size_t i = 1; i < size_; i++) {
-      hex += "," + format("0x%02hhx", cursor_[i]);
-    }
-  }
-
-  hex += "]";
-
-  return hex;
+  return hex.str();
 }
 
 void ByteSlice::clear() {
-  data_ = nullptr;
-  cursor_ = nullptr;
-  size_ = 0;
-  cap_ = 0;
+  base_ = nullptr;
+  head_ = nullptr;
+  tail_ = nullptr;
+  cap_ = nullptr;
 }
 
 // Decrease the number of reference by 1.
 // Free the memory if this is the last observer.
 void ByteSlice::try_deallocate() {
   if (data_ != nullptr && ref_count_.unique()) {
-    pool_.deallocate(data_, cap_);
+    pool_.deallocate(base_, cap());
   }
 
   clear();
 }
 
 void ByteSlice::copy_from(const ByteSlice& other) noexcept {
-  data_ = other.data_;
-  cursor_ = other.cursor_;
-  size_ = other.size_;
+  base_ = other.base_;
+  head_ = other.head_;
+  tail_ = other.tail_;
   cap_ = other.cap_;
   ref_count_ = other.ref_count_;
 }
@@ -138,31 +130,29 @@ void ByteSlice::move_from(ByteSlice&& other) noexcept {
     dst = {};             \
   } while (0)
 
-  MOV_AUX(data_, other.data_);
-  MOV_AUX(cursor_, other.cursor_);
-  MOV_AUX(size_, other.size_);
+  MOV_AUX(base_, other.base_);
+  MOV_AUX(head_, other.head_);
+  MOV_AUX(tail_, other.tail_);
   MOV_AUX(cap_, other.cap_);
   ref_count_ = std::move(other.ref_count_);
 
 #undef MOV_AUX
 }
 
-void ByteSlice::grow() {
-  std::size_t new_cap = std::max(1UL, cap_ * 2);
+void ByteSlice::grow(std::size_t new_cap) {
   Byte* new_data = pool_.allocate(new_cap);
-  ssize_t offset = std::distance(data_, cursor_);
 
   // Binary data may contain \0. Hence strcpy may not work.
-  memcpy(new_data, data_, size_);
+  memcpy(new_data, head_, size());
 
   // Reset the reference count since slice point to new memory.
   try_deallocate();
   ref_count_.reset();
 
-  data_ = new_data;
-  cursor_ = data_;
-  cap_ = new_cap;
-  std::advance(cursor_, offset);
+  base_ = new_data;
+  head_ = base_;
+  tail_ = std::next(head_, size());
+  cap_ = std::next(head_, new_cap);
 }
 
 }  // namespace boltdb

@@ -105,7 +105,8 @@
         "filesystem": "cpp",
         "__availability": "cpp",
         "format": "cpp",
-        "span": "cpp"
+        "span": "cpp",
+        "charconv": "cpp"
     },
     "cmake.configureOnOpen": false
 }
