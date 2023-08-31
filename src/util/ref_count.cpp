@@ -8,7 +8,7 @@ RefCount::RefCount() { reset(); }
 
 RefCount::RefCount(const RefCount& other) { copy_from(other); }
 
-RefCount::RefCount(RefCount&& other) { move_from(std::move(other)); }
+RefCount::RefCount(RefCount&& other) noexcept { move_from(std::move(other)); }
 
 RefCount& RefCount::operator=(const RefCount& other) {
   if (this == &other) {
@@ -21,7 +21,7 @@ RefCount& RefCount::operator=(const RefCount& other) {
   return *this;
 }
 
-RefCount& RefCount::operator=(RefCount&& other) {
+RefCount& RefCount::operator=(RefCount&& other) noexcept {
   decrease_and_try_release();
   move_from(std::move(other));
 

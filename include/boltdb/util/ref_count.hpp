@@ -9,12 +9,12 @@ class RefCount {
  public:
   RefCount();
   RefCount(const RefCount& other);
-  RefCount(RefCount&& other);
+  RefCount(RefCount&& other) noexcept;
 
   RefCount& operator=(const RefCount& other);
   // Note that: self movement makes trouble.
   // https://ericniebler.com/2017/03/31/post-conditions-on-self-move/
-  RefCount& operator=(RefCount&& other);
+  RefCount& operator=(RefCount&& other) noexcept;
 
   ~RefCount();
 

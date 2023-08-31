@@ -77,12 +77,11 @@ TEST(ByteSliceTest, MoveConstructorAndAssignment) {
   ByteSlice slice1(str1);
   ByteSlice slice2(std::move(slice1));
 
-  // Move works same with copy.
-  // TODO(gc): this may depend on the performance test
-  EXPECT_EQ(2, slice1.ref_count());
-  EXPECT_EQ(str1, slice1.to_string());
+  // Move slice1 to slice2.
+  EXPECT_EQ(0, slice1.ref_count());
+  EXPECT_EQ("", slice1.to_string());
 
-  EXPECT_EQ(2, slice2.ref_count());
+  EXPECT_EQ(1, slice2.ref_count());
   EXPECT_EQ(str1, slice2.to_string());
 }
 

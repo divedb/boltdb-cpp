@@ -19,6 +19,8 @@ namespace boltdb {
 // count, which increments when it is copied or assigned.
 class ByteSlice {
  public:
+  static MemoryPool& pool_;
+
   // Construct an empty slice.
   ByteSlice() = default;
 
@@ -38,8 +40,12 @@ class ByteSlice {
   ~ByteSlice();
 
   // Copy constructor and assignment.
-  ByteSlice(const ByteSlice& other) = default;
+  ByteSlice(const ByteSlice& other);
   ByteSlice& operator=(const ByteSlice& other);
+
+  // Move constructor and assignment.
+  ByteSlice(ByteSlice&& other) noexcept;
+  ByteSlice& operator=(ByteSlice&& other) noexcept;
 
   // Append a byte.
   ByteSlice& append(Byte v);
@@ -81,8 +87,10 @@ class ByteSlice {
   const Byte* data() const { return cursor_; }
 
  private:
-  void destroy();
-  void copy(const ByteSlice& other);
+  void clear();
+  void try_deallocate();
+  void copy_from(const ByteSlice& other) noexcept;
+  void move_from(ByteSlice&& other) noexcept;
   void grow();
 
   Byte* data_{nullptr};
@@ -90,7 +98,6 @@ class ByteSlice {
   std::size_t size_{0};
   std::size_t cap_{0};
   RefCount ref_count_;
-  MemoryPool& pool_{MemoryPool::instance()};
 };
 
 }  // namespace boltdb
