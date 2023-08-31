@@ -117,28 +117,25 @@ ByteSlice Meta::serialize(const Meta& meta) {
 }
 
 template <typename T>
-std::span<Byte> deserialize_aux(std::span<Byte> data, T& out_data) {
-  std::size_t offset = sizeof(T);
-  out_data = binary::BigEndian::uint<T>(data);
-
-  return data.subspan(offset);
+void deserialize_aux(ByteSlice& slice, T& out_data) {
+  out_data = binary::BigEndian::uint<T>(slice);
+  slice.remove_prefix(sizeof(T));
 }
 
 // Deserialize meta from the given slice.
 Meta Meta::deserialize(ByteSlice slice) {
   Meta meta;
-  std::span<Byte> sp = slice.span();
 
-  sp = deserialize_aux(sp, meta.magic);
-  sp = deserialize_aux(sp, meta.version);
-  sp = deserialize_aux(sp, meta.page_size);
-  sp = deserialize_aux(sp, meta.flags);
-  sp = deserialize_aux(sp, meta.root.root);
-  sp = deserialize_aux(sp, meta.root.sequence);
-  sp = deserialize_aux(sp, meta.freelist);
-  sp = deserialize_aux(sp, meta.pgid);
-  sp = deserialize_aux(sp, meta.txid);
-  sp = deserialize_aux(sp, meta.checksum);
+  deserialize_aux(slice, meta.magic);
+  deserialize_aux(slice, meta.version);
+  deserialize_aux(slice, meta.page_size);
+  deserialize_aux(slice, meta.flags);
+  deserialize_aux(slice, meta.root.root);
+  deserialize_aux(slice, meta.root.sequence);
+  deserialize_aux(slice, meta.freelist);
+  deserialize_aux(slice, meta.pgid);
+  deserialize_aux(slice, meta.txid);
+  deserialize_aux(slice, meta.checksum);
 
   return meta;
 }

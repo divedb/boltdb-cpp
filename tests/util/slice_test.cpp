@@ -107,13 +107,41 @@ TEST(ByteSliceTest, Span) {
 TEST(ByteSliceTest, ToHex) {
   ByteSlice slice;
 
-  EXPECT_EQ("[]", slice.to_hex());
+  EXPECT_EQ("", slice.to_hex());
 
   slice.append('a');
-  EXPECT_EQ("[0x61]", slice.to_hex());
+  EXPECT_EQ("0x61,", slice.to_hex());
 
   slice.append('b');
-  EXPECT_EQ("[0x61,0x62]", slice.to_hex());
+  EXPECT_EQ("0x61,0x62,", slice.to_hex());
+}
+
+TEST(ByteSliceTest, RemovePrefix) {
+  ByteSlice slice("hello world");
+
+  slice.remove_prefix(5);
+  EXPECT_EQ(" world", slice.to_string());
+
+  slice.remove_prefix(6);
+  EXPECT_EQ("", slice.to_string());
+  EXPECT_EQ(0, slice.size());
+
+  slice = ByteSlice("\x00\x01\x02\x03", 4);
+  EXPECT_EQ("0x00,0x01,0x02,0x03,", slice.to_hex());
+  EXPECT_EQ(4, slice.size());
+}
+
+TEST(ByteSliceTest, LargeString) {
+  std::size_t sz = 1000000;
+  ByteSlice slice;
+  std::string large_string(sz, 'a');
+
+  for (char c : large_string) {
+    slice.append(c);
+  }
+
+  EXPECT_EQ(large_string, slice.to_string());
+  EXPECT_EQ(sz, slice.size());
 }
 
 int main(int argc, char** argv) {

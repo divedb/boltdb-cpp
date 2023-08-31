@@ -16,12 +16,11 @@ ByteSlice::ByteSlice(const Byte* data, std::size_t size) {
   assert(data != nullptr);
 
   // Add 1 extra \0 to terminate.
-  size = round_up_to_power_of_two(size + 1);
-  base_ = pool_.allocate(size);
-  head_ = base_;
-  tail_ = head_;
-  cap_ = std::next(head_, cap_);
-  std::memcpy(data_, data, size_);
+  auto alloc_size = round_up_to_power_of_two(size + 1);
+  head_ = base_ = pool_.allocate(alloc_size);
+  tail_ = std::next(head_, static_cast<DiffType>(size));
+  cap_ = std::next(base_, static_cast<DiffType>(alloc_size));
+  std::memcpy(base_, data, size);
 }
 
 ByteSlice::ByteSlice(const Byte* cstring)
@@ -91,9 +90,9 @@ std::string ByteSlice::to_hex() const {
 
   //   return oss.str();
 
-  ostringstream hex;
-  transform(s3.begin(), s3.end(), ostream_iterator<Byte>{hex},
-            [](Byte c) { return format("0x%02hhx", c); });
+  std::ostringstream hex;
+  std::transform(head_, tail_, std::ostream_iterator<std::string>{hex},
+                 [](Byte c) { return format("0x%02hhx,", c); });
 
   return hex.str();
 }
@@ -108,7 +107,7 @@ void ByteSlice::clear() {
 // Decrease the number of reference by 1.
 // Free the memory if this is the last observer.
 void ByteSlice::try_deallocate() {
-  if (data_ != nullptr && ref_count_.unique()) {
+  if (base_ != nullptr && ref_count_.unique()) {
     pool_.deallocate(base_, cap());
   }
 
@@ -140,10 +139,11 @@ void ByteSlice::move_from(ByteSlice&& other) noexcept {
 }
 
 void ByteSlice::grow(std::size_t new_cap) {
+  auto sz = size();
   Byte* new_data = pool_.allocate(new_cap);
 
   // Binary data may contain \0. Hence strcpy may not work.
-  memcpy(new_data, head_, size());
+  memcpy(new_data, head_, sz);
 
   // Reset the reference count since slice point to new memory.
   try_deallocate();
@@ -151,8 +151,8 @@ void ByteSlice::grow(std::size_t new_cap) {
 
   base_ = new_data;
   head_ = base_;
-  tail_ = std::next(head_, size());
-  cap_ = std::next(head_, new_cap);
+  tail_ = std::next(head_, static_cast<DiffType>(sz));
+  cap_ = std::next(head_, static_cast<DiffType>(new_cap));
 }
 
 }  // namespace boltdb

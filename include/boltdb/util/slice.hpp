@@ -3,8 +3,8 @@
 
 #include <assert.h>
 
-#include <algorithm>
 #include <cstddef>
+#include <iterator>
 #include <span>
 #include <string>
 
@@ -19,6 +19,10 @@ namespace boltdb {
 // count, which increments when it is copied or assigned.
 class ByteSlice {
  public:
+  using ValueType = Byte;
+  using Pointer = ValueType*;
+  using DiffType = typename std::iterator_traits<Pointer>::difference_type;
+
   static MemoryPool& pool_;
 
   // Construct an empty slice.
@@ -62,23 +66,23 @@ class ByteSlice {
   std::string to_hex() const;
 
   // Index access.
-  Byte operator[](int index) const {
-    assert(static_cast<std::size_t>(index) < size_);
+  Byte operator[](std::size_t index) const {
+    assert(index < size());
 
     return head_[index];
   }
 
-  Byte& operator[](int index) {
-    assert(static_cast<std::size_t>(index) < size_);
+  Byte& operator[](std::size_t index) {
+    assert(index < size());
 
     return head_[index];
   }
 
-  // Advance n steps.
-  void remove_prefix(std::size_t n) {
-    assert(std::next(head_, n) < tail_);
+  // Remove [0, index) range from this slice.
+  void remove_prefix(std::size_t index) {
+    assert(index <= size());
 
-    head_ = std::next(head_, n);
+    head_ = std::next(head_, static_cast<DiffType>(index));
   }
 
   std::span<Byte> span() const { return {head_, tail_}; }
