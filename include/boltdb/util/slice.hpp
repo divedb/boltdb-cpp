@@ -14,6 +14,14 @@
 
 namespace boltdb {
 
+class BinaryString {
+ public:
+  explcit BinaryString(const Byte* bin_data, std::size_t size) {}
+
+  const Byte* bin_data;
+  std::size_t size;
+};
+
 // The ByteSlice class represents a slice of bytes in memory. It is important to
 // note that this class is not thread-safe. It internally maintains a reference
 // count, which increments when it is copied or assigned.

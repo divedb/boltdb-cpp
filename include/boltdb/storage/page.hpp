@@ -32,19 +32,19 @@ class Page {
   Page(PageID pid, PageFlag flag, int page_size);
 
   // Get page flag.
-  [[nodiscard]] PageFlag flag() const { return flag_; }
+  PageFlag flag() const { return flag_; }
 
   // Get number of leaf page elements.
-  [[nodiscard]] u16 count() const { return count_; }
+  u16 count() const { return count_; }
 
   // Get number of overflow pages.
-  [[nodiscard]] u32 overflow() const { return overflow_; }
+  u32 overflow() const { return overflow_; }
 
   // Get page id.
-  [[nodiscard]] PageID pid() const { return pid_; }
+  PageID pid() const { return pid_; }
 
   // Get a human readable page type string used for debugging.
-  [[nodiscard]] std::string type() const;
+  std::string type() const;
 
   // Get underlying page data.
   const Byte* data() const { return pdata_.data(); }

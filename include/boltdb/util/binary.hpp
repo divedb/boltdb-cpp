@@ -111,13 +111,19 @@ class BigEndian {
     }
   }
 
-  //   template <typename... Integers>
-  //   requires std::conjunction_v<std::is_same_v<Integers>...>
-  //   static ByteSlice append_variadic_uint(ByteSlice slice, Integers...
-  //   integers) {
-  //     (..., (slice = append_uint(slice, integers)));
-  //     return slice;
-  //   }
+  // template <typename... Integers>
+  // requires std::conjunction_v<std::is_integral_v<Integers>...> static
+  // ByteSlice append_variadic_uint(ByteSlice slice, Integers... integers) {
+  //   (..., (slice = append_uint(slice, integers)));
+  //   return slice;
+  // }
+
+  template <typename... Integers>
+  requires std::is_integral_v<std::common_type_t<Integers...>> static ByteSlice
+  append_variadic_uint(ByteSlice slice, Integers... integers) {
+    (..., (slice = append_uint(slice, integers)));
+    return slice;
+  }
 };
 
 }  // namespace boltdb::binary

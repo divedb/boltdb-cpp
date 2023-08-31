@@ -9,7 +9,6 @@
 
 namespace boltdb {
 
-// TODO(gc): double check this.
 template <typename Pointer>
 Byte* advance_n_bytes(Pointer p, std::size_t n) {
   return std::next(reinterpret_cast<Byte*>(p), n);
@@ -19,9 +18,6 @@ template <typename T>
 Byte* advance_n_bytes(const T* p, std::size_t n) {
   return advance_n_bytes(const_cast<T*>(p), n);
 }
-
-Page::Page(PageID pid, PageFlag flag, int page_size)
-    : flag_(flag), pid_(pid), pdata_(page_size) {}
 
 inline Byte* Page::skip_page_header() const {
   return advance_n_bytes(pdata_.data(), kPageHeaderSize);
@@ -33,6 +29,14 @@ inline T* Page::cast_ptr() const {
   Byte* base = skip_page_header();
 
   return reinterpret_cast<T*>(base);
+}
+
+Page::Page(PageID pid, PageFlag flag, int page_size)
+    : flag_(flag), pid_(pid), pdata_(page_size) {
+  // binary::BigEndian::put_uint<decltype(flag_)>(pdata_, pid);
+  // binary::BigEndian::put_uint<decltype(count_)>(pdata_, pid);
+  // binary::BigEndian::put_uint<decltype(overflow_)>(pdata_, pid);
+  // binary::BigEndian::put_uint<decltype(pid_)>(pdata_, pid);
 }
 
 Meta* Page::meta() const { return cast_ptr<Meta>(); }
