@@ -7,20 +7,15 @@
 #include <iterator>
 #include <span>
 #include <string>
+#include <type_traits>
+#include <vector>
 
 #include "boltdb/alloc/memory_pool.hpp"
 #include "boltdb/util/common.hpp"
 #include "boltdb/util/ref_count.hpp"
+#include "boltdb/util/util.hpp"
 
 namespace boltdb {
-
-class BinaryString {
- public:
-  explcit BinaryString(const Byte* bin_data, std::size_t size) {}
-
-  const Byte* bin_data;
-  std::size_t size;
-};
 
 // The ByteSlice class represents a slice of bytes in memory. It is important to
 // note that this class is not thread-safe. It internally maintains a reference
@@ -37,9 +32,8 @@ class ByteSlice {
   ByteSlice() = default;
 
   // Construct the slice from the given data.
-  // Note that, this supports construction from the binary data provided that
-  // the `size` is valid. That is, dereference *(bin_data + size) is valid.
-  ByteSlice(const Byte* bin_data, std::size_t size);
+  // Note that, this supports construction from the binary data.
+  ByteSlice(const std::vector<Byte>& bin_data);
 
   // Construct `ByteSlice` from the given data.
   // Note that the `data` must be \0 terminated.
@@ -48,6 +42,20 @@ class ByteSlice {
 
   // Construct the slice with `n` copies of byte `v`.
   ByteSlice(std::size_t n, Byte v = 0);
+
+  template <typename InputIter,
+            typename = std::enable_if_t<std::is_same_v<
+                Byte, typename std::iterator_traits<InputIter>::value_type>>>
+  ByteSlice(InputIter first, InputIter last) {
+    auto size = std::distance(first, last);
+
+    // Add 1 extra \0 to terminate.
+    auto alloc_size = round_up_to_power_of_two(size + 1);
+    head_ = base_ = pool_.allocate(alloc_size);
+    tail_ = std::next(head_, static_cast<DiffType>(size));
+    cap_ = std::next(base_, static_cast<DiffType>(alloc_size));
+    std::copy(first, last, base_);
+  }
 
   ~ByteSlice();
 

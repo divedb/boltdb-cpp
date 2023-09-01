@@ -101,19 +101,19 @@ std::string Page::type() const {
 ByteSlice BranchPageElement::key() const {
   Byte* key = advance_n_bytes(this, pos_);
 
-  return {key, key_size_};
+  return {key, key + key_size_};
 }
 
 ByteSlice LeafPageElement::key() const {
   Byte* key = advance_n_bytes(this, pos_);
 
-  return {key, key_size_};
+  return {key, key + key_size_};
 }
 
 ByteSlice LeafPageElement::value() const {
   Byte* value = advance_n_bytes(this, pos_ + key_size_);
 
-  return {value, value_size_};
+  return {value, value + value_size_};
 }
 
 }  // namespace boltdb

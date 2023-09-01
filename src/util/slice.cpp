@@ -6,28 +6,18 @@
 #include <sstream>
 #include <type_traits>
 
-#include "boltdb/util/util.hpp"
-
 namespace boltdb {
 
 MemoryPool& ByteSlice::pool_ = MemoryPool::instance();
 
-ByteSlice::ByteSlice(const Byte* data, std::size_t size) {
-  assert(data != nullptr);
-
-  // Add 1 extra \0 to terminate.
-  auto alloc_size = round_up_to_power_of_two(size + 1);
-  head_ = base_ = pool_.allocate(alloc_size);
-  tail_ = std::next(head_, static_cast<DiffType>(size));
-  cap_ = std::next(base_, static_cast<DiffType>(alloc_size));
-  std::memcpy(base_, data, size);
-}
+ByteSlice::ByteSlice(const std::vector<Byte>& bin_data)
+    : ByteSlice(bin_data.begin(), bin_data.end()) {}
 
 ByteSlice::ByteSlice(const Byte* cstring)
-    : ByteSlice(cstring, strlen(cstring)) {}
+    : ByteSlice(cstring, cstring + strlen(cstring)) {}
 
 ByteSlice::ByteSlice(const std::string& data)
-    : ByteSlice(data.c_str(), data.size()) {}
+    : ByteSlice(data.begin(), data.end()) {}
 
 ByteSlice::ByteSlice(std::size_t n, Byte v) : ByteSlice(std::string(n, v)) {}
 
