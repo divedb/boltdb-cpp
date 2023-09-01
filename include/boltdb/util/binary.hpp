@@ -15,26 +15,26 @@ class BigEndian {
   template <typename T>
   requires std::is_integral_v<T> static std::make_unsigned_t<T> uint(
       ByteSlice slice) {
-    using UnsignedT = std::make_unsigned_t<T>;
     using UByte = std::make_unsigned_t<Byte>;
+    using UnsignedT = std::make_unsigned_t<T>;
 
-    if constexpr (std::is_same_v<UnsignedT, u8>) {
+    if constexpr (sizeof(T) == sizeof(u8)) {
       return static_cast<UnsignedT>(static_cast<UByte>(slice[0]));
     }
 
-    if constexpr (std::is_same_v<UnsignedT, u16>) {
+    if constexpr (sizeof(T) == sizeof(u16)) {
       return static_cast<UnsignedT>(static_cast<UByte>(slice[1])) |
              (static_cast<UnsignedT>(static_cast<UByte>(slice[0])) << 8);
     }
 
-    if constexpr (std::is_same_v<UnsignedT, u32>) {
+    if constexpr (sizeof(T) == sizeof(u32)) {
       return static_cast<UnsignedT>(static_cast<UByte>(slice[3])) |
              (static_cast<UnsignedT>(static_cast<UByte>(slice[2])) << 8) |
              (static_cast<UnsignedT>(static_cast<UByte>(slice[1])) << 16) |
              (static_cast<UnsignedT>(static_cast<UByte>(slice[0])) << 24);
     }
 
-    if constexpr (std::is_same_v<UnsignedT, u64>) {
+    if constexpr (sizeof(T) == sizeof(u64)) {
       return static_cast<UnsignedT>(static_cast<UByte>(slice[7])) |
              (static_cast<UnsignedT>(static_cast<UByte>(slice[6])) << 8) |
              (static_cast<UnsignedT>(static_cast<UByte>(slice[5])) << 16) |
@@ -50,25 +50,23 @@ class BigEndian {
   requires std::is_integral_v<T> static void put_uint(ByteSlice slice, T v) {
     assert(slice.size() >= sizeof(T));
 
-    using UnsignedT = std::make_unsigned_t<T>;
-
-    if constexpr (std::is_same_v<UnsignedT, u8>) {
+    if constexpr (sizeof(T) == sizeof(u8)) {
       slice[0] = static_cast<Byte>(v);
     }
 
-    if constexpr (std::is_same_v<UnsignedT, u16>) {
+    if constexpr (sizeof(T) == sizeof(u16)) {
       slice[0] = static_cast<Byte>(v >> 8);
       slice[1] = static_cast<Byte>(v);
     }
 
-    if constexpr (std::is_same_v<UnsignedT, u32>) {
+    if constexpr (sizeof(T) == sizeof(u32)) {
       slice[0] = static_cast<Byte>(v >> 24);
       slice[1] = static_cast<Byte>(v >> 16);
       slice[2] = static_cast<Byte>(v >> 8);
       slice[3] = static_cast<Byte>(v);
     }
 
-    if constexpr (std::is_same_v<UnsignedT, u64>) {
+    if constexpr (sizeof(T) == sizeof(u64)) {
       slice[0] = static_cast<Byte>(v >> 56);
       slice[1] = static_cast<Byte>(v >> 48);
       slice[2] = static_cast<Byte>(v >> 40);
@@ -83,23 +81,23 @@ class BigEndian {
   template <typename T>
   requires std::is_integral_v<T> static ByteSlice append_uint(ByteSlice slice,
                                                               T v) {
-    if constexpr (std::is_same_v<T, i8> || std::is_same_v<T, u8>) {
+    if constexpr (sizeof(T) == sizeof(u8)) {
       return slice.append(static_cast<Byte>(v));
     }
 
-    if constexpr (std::is_same_v<T, i16> || std::is_same_v<T, u16>) {
-      return slice.append(static_cast<Byte>(v >> 16))
+    if constexpr (sizeof(T) == sizeof(u16)) {
+      return slice.append(static_cast<Byte>(v >> 8))
           .append(static_cast<Byte>(v));
     }
 
-    if constexpr (std::is_same_v<T, i32> || std::is_same_v<T, u32>) {
+    if constexpr (sizeof(T) == sizeof(u32)) {
       return slice.append(static_cast<Byte>(v >> 24))
           .append(static_cast<Byte>(v >> 16))
           .append(static_cast<Byte>(v >> 8))
           .append(static_cast<Byte>(v));
     }
 
-    if constexpr (std::is_same_v<T, i64> || std::is_same_v<T, u64>) {
+    if constexpr (sizeof(T) == sizeof(u64)) {
       return slice.append(static_cast<Byte>(v >> 56))
           .append(static_cast<Byte>(v >> 48))
           .append(static_cast<Byte>(v >> 40))
@@ -109,6 +107,8 @@ class BigEndian {
           .append(static_cast<Byte>(v >> 8))
           .append(static_cast<Byte>(v));
     }
+
+    return slice;
   }
 
   // template <typename... Integers>
