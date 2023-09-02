@@ -26,18 +26,30 @@ class Meta {
   // Deserialize meta from the given slice.
   static Meta deserialize(ByteSlice slice);
 
-  void compute_checksum();
-
   // Write meta information to the specified slice.
   // This does *include* the checksum field.
   void write(ByteSlice& slice) const;
 
-  bool equals(const Meta& rhs) const {
-    return magic == rhs.magic && version == rhs.version &&
-           page_size == rhs.page_size && flags == rhs.flags &&
-           root.root == rhs.root.root && root.sequence == rhs.root.sequence &&
-           freelist == rhs.freelist && pgid == rhs.pgid && txid == rhs.txid &&
-           checksum == rhs.checksum;
+  // Compute checksum.
+  u64 sum64() const;
+
+  // Checks the marker bytes and version of the meta page to ensure it matches
+  // this binary.
+  Status validate() const {
+    if (magic != DB::kMagic) {
+      return {kStatusErr, "Invalid magic"};
+    }
+
+    if (version != DB::kVersion) {
+      return {kStatusErr, "Invalid version"};
+    }
+
+    auto read_checksum = checksum;
+    if (read_checksum != sum64()) {
+      return {kStatusCorrupt, "Invalid checksum"};
+    }
+
+    return {};
   }
 
   u32 magic;
@@ -51,9 +63,7 @@ class Meta {
   u64 checksum;
 
  private:
-  // Write meta information to the specified slice.
-  // This does *exclude* the checksum field.
-  void write_without_checksum(ByteSlice& slice) const;
+  void write_aux(ByteSlice& slice) const;
 };
 
 // DB represents a collection of buckets persisted to a file on disk.

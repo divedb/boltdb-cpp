@@ -19,12 +19,12 @@ Byte* advance_n_bytes(const T* p, std::size_t n) {
   return advance_n_bytes(const_cast<T*>(p), n);
 }
 
-Page::Page(PageFlag flag, PageID pid, int page_size)
-    : pheader_(flag, pid), page_size_(page_size) {
+Page::Page(PageID pid, PageFlag flag, int page_size)
+    : pheader_(pid, flag), page_size_(page_size) {
   pdata_.reserve(page_size_);
-  binary::BigEndian::append_variadic_uint(
-      pdata_, static_cast<u16>(pheader_.flag), pheader_.count,
-      pheader_.overflow, pheader_.pid);
+  binary::BigEndian::append_variadic_uint(pdata_, pheader_.pid,
+                                          static_cast<u16>(pheader_.flag),
+                                          pheader_.count, pheader_.overflow);
 }
 
 std::string Page::type() const {

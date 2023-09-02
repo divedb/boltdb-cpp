@@ -28,19 +28,19 @@ class BranchPageElement;
 
 class PageHeader {
  public:
-  PageHeader(PageFlag flag, PageID pid) : flag(flag), pid(pid) {}
+  PageHeader(PageID pid, PageFlag flag) : pid(pid), flag(flag) {}
 
+  PageID pid;      // 8 bytes, page id
   PageFlag flag;   // 2 bytes, identify page type
   u16 count{};     // 2 bytes
   u32 overflow{};  // 4 bytes, number of overflow pages
-  PageID pid;      // 8 bytes, page id
 };
 
 // `Page` represents a generic page structure, which could be converted to
 // `meta`, `freelist`, `branch` and `leaf` pages.
 class Page {
  public:
-  Page(PageFlag flag, PageID pid, int page_size);
+  Page(PageID pid, PageFlag flag, int page_size);
 
   // Get page flag.
   PageFlag flag() const { return pheader_.flag; }
@@ -123,10 +123,10 @@ class LeafPageElement {
   u32 value_size() const { return value_size_; }
 
   // Get a byte slice of the node key.
-  [[nodiscard]] ByteSlice key() const;
+  ByteSlice key() const;
 
   // Get a byte slice of the node value.
-  [[nodiscard]] ByteSlice value() const;
+  ByteSlice value() const;
 
  private:
   u32 flags_;

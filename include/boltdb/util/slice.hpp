@@ -4,6 +4,7 @@
 #include <assert.h>
 
 #include <cstddef>
+#include <initializer_list>
 #include <iterator>
 #include <span>
 #include <string>
@@ -39,6 +40,9 @@ class ByteSlice {
   // Note that the `data` must be \0 terminated.
   explicit ByteSlice(const Byte* cstring);
   explicit ByteSlice(const std::string& data);
+
+  ByteSlice(const std::initializer_list<Byte>& data)
+      : ByteSlice(data.begin(), data.end()) {}
 
   // Construct the slice with `n` copies of byte `v`.
   ByteSlice(std::size_t n, Byte v = 0);

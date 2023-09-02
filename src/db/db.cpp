@@ -16,7 +16,7 @@ Status DB::init() const {
 
   // Create two meta pages.
   for (int i = 0; i < 2; i++) {
-    Page page(PageFlag::kMeta, i, page_size_);
+    Page page(i, PageFlag::kMeta, page_size_);
     Meta* meta = page.meta();
 
     // Initialize the meta page.
@@ -28,16 +28,16 @@ Status DB::init() const {
     meta->root = {.root = 3, .sequence = 0};
     meta->pgid = i;
     meta->txid = i;
-    meta->compute_checksum();
+    meta->checksum = meta->sum64();
 
     pages.push_back(page);
   }
 
   // Write an empty freelist at page 3.
-  pages.emplace_back(PageFlag::kFreeList, 2, page_size_);
+  pages.emplace_back(2, PageFlag::kFreeList, page_size_);
 
   // Write an empty leaf page at page 4.
-  pages.emplace_back(PageFlag::kLeaf, 3, page_size_);
+  pages.emplace_back(3, PageFlag::kLeaf, page_size_);
 
   // Write the first 4 pages to the data file.
   ssize_t offset = 0;
@@ -59,7 +59,7 @@ Status DB::init() const {
 
     file_handle_->fdatasync();
   } catch (const IOException& e) {
-    return {kStatusErr, e.what()};
+    compute_checksum return {kStatusErr, e.what()};
   }
 
   return {};
@@ -95,10 +95,33 @@ Status open_db(std::string path, Options options, DB** out_db) {
   std::unique_ptr<DB> db(new DB(std::move(handle), options));
 
   if (FileSystem::file_size(*db->file_handle_) == 0) {
+    db->page_size_ = OS::getpagesize();
     Status status = db->init();
 
     if (!status.ok()) {
       return status;
+    }
+  } else {
+    Status status;
+    // Read the first meta page to determine the page size.
+    ByteSlice buffer(0x1000);
+
+    // TODO(gc): what happens if the page size is 512, 1024, 2048, 4096, 8192.
+    ssize_t bytes_read = db->file_handle_->read(
+        const_cast<Byte*>(buffer.data()), buffer.size(), 0);
+    Meta meta = Meta::deserialize(buffer);
+
+    if (status = meta.validate(); !status.ok()) {
+      // If we can't read the page size, we can assume it's the same
+      // as the OS -- since that's how the page size was chosen in the
+      // first place.
+      //
+      // If the first page is invalid and this OS uses a different
+      // page size than what the database was created with then we
+      // are out of luck and cannot access the database.
+      db->page_size_ = OS::getpagesize();
+    } else {
+      db->page_size_ = meta.page_size;
     }
   }
 
@@ -140,28 +163,22 @@ Meta Meta::deserialize(ByteSlice slice) {
   return meta;
 }
 
-void Meta::compute_checksum() {
+u64 Meta::sum64() const {
   ByteSlice slice;
+  write_aux(slice);
 
-  write_without_checksum(slice);
-  checksum = crc64_be(0, slice.data(), slice.size());
+  return crc64_be(0, slice.data(), slice.size());
 }
 
 void Meta::write(ByteSlice& slice) const {
-  write_without_checksum(slice);
+  write_aux(slice);
   slice = binary::BigEndian::append_uint(slice, checksum);
 }
 
-void Meta::write_without_checksum(ByteSlice& slice) const {
-  slice = binary::BigEndian::append_uint(slice, magic);
-  slice = binary::BigEndian::append_uint(slice, version);
-  slice = binary::BigEndian::append_uint(slice, page_size);
-  slice = binary::BigEndian::append_uint(slice, flags);
-  slice = binary::BigEndian::append_uint(slice, root.root);
-  slice = binary::BigEndian::append_uint(slice, root.sequence);
-  slice = binary::BigEndian::append_uint(slice, freelist);
-  slice = binary::BigEndian::append_uint(slice, pgid);
-  slice = binary::BigEndian::append_uint(slice, txid);
+void Meta::write_aux(ByteSlice& slice) const {
+  slice = binary::BigEndian::append_variadic_uint(
+      slice, magic, version, page_size, flags, root.root, root.sequence,
+      freelist, pgid, txid);
 }
 
 }  // namespace boltdb
