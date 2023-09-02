@@ -70,6 +70,10 @@ class ByteSlice {
   // Append a byte.
   ByteSlice& append(Byte v);
 
+  // Reserve a specified capacity for this slice.
+  // Note that, this operation will not change the #size.
+  void reserve(std::size_t sz);
+
   // Get the number of reference to same byte slice.
   int ref_count() const { return ref_count_.count(); }
 

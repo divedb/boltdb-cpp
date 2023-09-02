@@ -19,24 +19,34 @@ Byte* advance_n_bytes(const T* p, std::size_t n) {
   return advance_n_bytes(const_cast<T*>(p), n);
 }
 
-inline Byte* Page::skip_page_header() const {
-  return advance_n_bytes(pdata_.data(), kPageHeaderSize);
+Page::Page(PageFlag flag, PageID pid, int page_size)
+    : pheader_(flag, pid), page_size_(page_size) {
+  pdata_.reserve(page_size_);
+  binary::BigEndian::append_variadic_uint(
+      pdata_, static_cast<u16>(pheader_.flag), pheader_.count,
+      pheader_.overflow, pheader_.pid);
 }
 
-template <typename T>
-inline T* Page::cast_ptr() const {
-  // Get base ptr, which excludes the page header.
-  Byte* base = skip_page_header();
+std::string Page::type() const {
+  auto flag = pheader_.flag;
 
-  return reinterpret_cast<T*>(base);
-}
+  if ((flag & kBranch) != 0) {
+    return "branch";
+  }
 
-Page::Page(PageID pid, PageFlag flag, int page_size)
-    : flag_(flag), pid_(pid), pdata_(page_size) {
-  // binary::BigEndian::put_uint<decltype(flag_)>(pdata_, pid);
-  // binary::BigEndian::put_uint<decltype(count_)>(pdata_, pid);
-  // binary::BigEndian::put_uint<decltype(overflow_)>(pdata_, pid);
-  // binary::BigEndian::put_uint<decltype(pid_)>(pdata_, pid);
+  if ((flag & kLeaf) != 0) {
+    return "leaf";
+  }
+
+  if ((flag & kMeta) != 0) {
+    return "meta";
+  }
+
+  if ((flag & kFreeList) != 0) {
+    return "freelist";
+  }
+
+  return format("unknown<%02x>", flag);
 }
 
 Meta* Page::meta() const { return cast_ptr<Meta>(); }
@@ -50,7 +60,7 @@ LeafPageElement* Page::leaf_page_element(u16 index) const {
 std::span<LeafPageElement> Page::leaf_page_elements() const {
   auto base = cast_ptr<LeafPageElement>();
 
-  return {base, count_};
+  return {base, pheader_.count};
 }
 
 BranchPageElement* Page::branch_page_element(u16 index) const {
@@ -62,7 +72,7 @@ BranchPageElement* Page::branch_page_element(u16 index) const {
 std::span<BranchPageElement> Page::branch_page_elements() const {
   auto base = cast_ptr<BranchPageElement>();
 
-  return {base, count_};
+  return {base, pheader_.count};
 }
 
 void Page::hexdump(int n) const {
@@ -78,24 +88,16 @@ void Page::hexdump(int n) const {
   std::cout << oss.str();
 }
 
-std::string Page::type() const {
-  if ((flag_ & kBranch) != 0) {
-    return "branch";
-  }
+// Get base ptr, which excludes the page header.
+inline Byte* Page::skip_page_header() const {
+  return advance_n_bytes(data(), kPageHeaderSize);
+}
 
-  if ((flag_ & kLeaf) != 0) {
-    return "leaf";
-  }
+template <typename T>
+inline T* Page::cast_ptr() const {
+  Byte* base = skip_page_header();
 
-  if ((flag_ & kMeta) != 0) {
-    return "meta";
-  }
-
-  if ((flag_ & kFreeList) != 0) {
-    return "freelist";
-  }
-
-  return format("unknown<%02x>", flag_);
+  return reinterpret_cast<T*>(base);
 }
 
 ByteSlice BranchPageElement::key() const {

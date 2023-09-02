@@ -1,6 +1,7 @@
 #ifndef BOLTDB_CPP_STORAGE_PAGE_HPP_
 #define BOLTDB_CPP_STORAGE_PAGE_HPP_
 
+#include <cstddef>
 #include <cstdint>
 #include <span>
 #include <string>
@@ -25,23 +26,33 @@ class Meta;
 class LeafPageElement;
 class BranchPageElement;
 
+class PageHeader {
+ public:
+  PageHeader(PageFlag flag, PageID pid) : flag(flag), pid(pid) {}
+
+  PageFlag flag;   // 2 bytes, identify page type
+  u16 count{};     // 2 bytes
+  u32 overflow{};  // 4 bytes, number of overflow pages
+  PageID pid;      // 8 bytes, page id
+};
+
 // `Page` represents a generic page structure, which could be converted to
 // `meta`, `freelist`, `branch` and `leaf` pages.
 class Page {
  public:
-  Page(PageID pid, PageFlag flag, int page_size);
+  Page(PageFlag flag, PageID pid, int page_size);
 
   // Get page flag.
-  PageFlag flag() const { return flag_; }
+  PageFlag flag() const { return pheader_.flag; }
 
   // Get number of leaf page elements.
-  u16 count() const { return count_; }
+  u16 count() const { return pheader_.count; }
 
   // Get number of overflow pages.
-  u32 overflow() const { return overflow_; }
+  u32 overflow() const { return pheader_.overflow; }
 
   // Get page id.
-  PageID pid() const { return pid_; }
+  PageID pid() const { return pheader_.pid; }
 
   // Get a human readable page type string used for debugging.
   std::string type() const;
@@ -50,20 +61,20 @@ class Page {
   const Byte* data() const { return pdata_.data(); }
 
   // Get page size in bytes.
-  std::size_t page_size() const { return pdata_.size(); }
+  std::size_t page_size() const { return page_size_; }
 
   // Get a pointer to the metadata section of the page.
-  [[nodiscard]] Meta* meta() const;
+  Meta* meta() const;
 
   // Get the leaf node by index.
-  [[nodiscard]] LeafPageElement* leaf_page_element(u16 index) const;
+  LeafPageElement* leaf_page_element(u16 index) const;
 
-  [[nodiscard]] std::span<LeafPageElement> leaf_page_elements() const;
+  std::span<LeafPageElement> leaf_page_elements() const;
 
   // Get the branch node by index.
-  [[nodiscard]] BranchPageElement* branch_page_element(u16 index) const;
+  BranchPageElement* branch_page_element(u16 index) const;
 
-  [[nodiscard]] std::span<BranchPageElement> branch_page_elements() const;
+  std::span<BranchPageElement> branch_page_elements() const;
 
   void hexdump(int n) const;
 
@@ -73,11 +84,9 @@ class Page {
   template <typename T>
   T* cast_ptr() const;
 
-  PageFlag flag_;    // 2 bytes, identify page type
-  u16 count_{};      // 2 bytes
-  u32 overflow_{};   // 4 bytes, number of overflow pages
-  PageID pid_;       // 8 bytes, page id
-  ByteSlice pdata_;  // Page data
+  PageHeader pheader_;   // Page header
+  ByteSlice pdata_;      // Page data
+  const int page_size_;  // Page size
 };
 
 // BranchPageElement represents a node on a branch page.
@@ -86,12 +95,12 @@ class BranchPageElement {
   BranchPageElement(u32 pos, u32 key_size, PageID pid)
       : pos_(pos), key_size_(key_size), pid_(pid) {}
 
-  // Get a byte slice of the node key.
-  [[nodiscard]] ByteSlice key() const;
-
   u32 pos() const { return pos_; }
   u32 key_size() const { return key_size_; }
   PageID pid() const { return pid_; }
+
+  // Get a byte slice of the node key.
+  ByteSlice key() const;
 
  private:
   u32 pos_;
@@ -126,7 +135,7 @@ class LeafPageElement {
   u32 value_size_;
 };
 
-static constexpr const int kPageHeaderSize = sizeof(Page);
+static constexpr const int kPageHeaderSize = sizeof(PageHeader);
 static constexpr const int kBranchPageElementSize = sizeof(BranchPageElement);
 static constexpr const int kLeafPageElementSize = sizeof(LeafPageElement);
 

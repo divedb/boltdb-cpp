@@ -21,7 +21,7 @@ TEST(PageTest, PageType) {
                                          {PageFlag::kFreeList, "freelist"}};
 
   for (auto&& tc : test_cases) {
-    Page page(0, tc.flag, kMockPageSize);
+    Page page(tc.flag, 0, kMockPageSize);
 
     EXPECT_EQ(tc.type, page.type());
   }

@@ -62,6 +62,14 @@ ByteSlice& ByteSlice::append(Byte v) {
   return *this;
 }
 
+void ByteSlice::reserve(std::size_t sz) {
+  auto old_cap = cap();
+
+  if (old_cap < sz) {
+    grow(sz);
+  }
+}
+
 std::string ByteSlice::to_string() const { return {head_, size()}; }
 
 std::string ByteSlice::to_hex() const {

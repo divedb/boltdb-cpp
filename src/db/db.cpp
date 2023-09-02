@@ -16,7 +16,7 @@ Status DB::init() const {
 
   // Create two meta pages.
   for (int i = 0; i < 2; i++) {
-    Page page(i, PageFlag::kMeta, page_size_);
+    Page page(PageFlag::kMeta, i, page_size_);
     Meta* meta = page.meta();
 
     // Initialize the meta page.
@@ -34,10 +34,10 @@ Status DB::init() const {
   }
 
   // Write an empty freelist at page 3.
-  pages.emplace_back(2, PageFlag::kFreeList, page_size_);
+  pages.emplace_back(PageFlag::kFreeList, 2, page_size_);
 
   // Write an empty leaf page at page 4.
-  pages.emplace_back(3, PageFlag::kLeaf, page_size_);
+  pages.emplace_back(PageFlag::kLeaf, 3, page_size_);
 
   // Write the first 4 pages to the data file.
   ssize_t offset = 0;
