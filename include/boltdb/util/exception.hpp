@@ -10,7 +10,7 @@ namespace boltdb {
 //===--------------------------------------------------------------------===//
 // Exception Types
 //===--------------------------------------------------------------------===//
-enum class ExceptionType { kInvalid = 0, kIO = 1 };
+enum class ExceptionType { kInvalid = 0, kIO, kNode };
 
 std::string exception_type_to_string(ExceptionType type);
 
@@ -39,6 +39,12 @@ class DBException : public std::exception {
 
  private:
   std::string error_;
+};
+
+class NodeException : public Exception {
+ public:
+  NodeException(std::string message)
+      : Exception(ExceptionType::kNode, message) {}
 };
 
 }  // namespace boltdb

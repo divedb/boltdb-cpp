@@ -71,6 +71,14 @@ class ByteSlice {
   ByteSlice(ByteSlice&& other) noexcept;
   ByteSlice& operator=(ByteSlice&& other) noexcept;
 
+  // Get true if both slice contain same byte sequence.
+  bool equals(ByteSlice other) const;
+
+  // Compare other slice byte by byte.
+  // Return 1 if this slice > other, -1 if this slice < other.
+  // Otherwise return 0.
+  int bytes_compare(ByteSlice other) const;
+
   // Append a byte.
   ByteSlice& append(Byte v);
 

@@ -51,6 +51,24 @@ ByteSlice& ByteSlice::operator=(ByteSlice&& other) noexcept {
   return *this;
 }
 
+bool ByteSlice::equals(ByteSlice other) const {
+  return std::equal(head_, tail_, other.head_, other.tail_);
+}
+
+// TODO(gc): simd acceleration
+int ByteSlice::bytes_compare(ByteSlice other) const {
+  int sz1 = size();
+  int sz2 = other.size();
+
+  int res = std::memcmp(head_, other.head_, std::min(sz1, sz2));
+
+  if (res != 0) {
+    return res;
+  }
+
+  return sz1 < sz2 ? -1 : 1;
+}
+
 ByteSlice& ByteSlice::append(Byte v) {
   if (tail_ == cap_) {
     std::size_t new_cap = std::max(1UL, cap() * 2);

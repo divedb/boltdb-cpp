@@ -5,9 +5,9 @@
 #include <numeric>
 #include <vector>
 
-#include "boltdb/storage/page.hpp"
 #include "boltdb/util/common.hpp"
 #include "boltdb/util/slice.hpp"
+#include "boltdb/util/types.hpp"
 
 namespace boltdb {
 
@@ -27,35 +27,78 @@ struct Inode {
 // Node represents an in-memory, deserialized page.
 // TODO(gc):
 // Q1: why node binds to a bucket. A bucket is a B+ tree?
-
 class Node {
  public:
- private:
-  // root returns the top-level node this node is attached to.
-  Node* root();
+  Node(PageID pgid, Bucket* bucket, Node* parent)
+      : pgid_(pgid), bucket_(bucket), parent_(parent) {}
 
-  // min_keys returns the minimum number of inodes this node should have.
-  // TODO(gc): this method looks weired.
-  int min_keys() const;
+  // Get the top-level node this node is attached to.
+  Node* root() {
+    if (parent_ == nullptr) {
+      return this;
+    }
 
-  // size returns the size of the node after serialization.
+    return parent_->root();
+  }
+
+  // Get the minimum number of inodes this node should have.
+  int min_keys() const {
+    if (is_leaf_) {
+      return 1;
+    }
+
+    return 2;
+  }
+
+  // Get the size of the node after serialization.
   int size() const;
 
-  int page_element_size() const;
+  // Get true if the node is less than a given size.
+  // This is an optimization to avoid calculating a large node when we only need
+  // to know if it fits inside a certain page size.
+  bool is_size_less_than(int v) const;
+
+  int page_element_size() const {
+    if (is_leaf_) {
+      return kLeafPageElementSize;
+    }
+
+    return kBranchPageElementSize;
+  }
 
   // Get the child node at a given index.
   // TODO(gc): why not use children directly
-  Node* child_at(int index);
+  Node* child_at(int index) const;
 
-  Bucket* _bucket;
-  bool _is_leaf;
-  bool _unbalanced;
-  bool _spilled;
-  PageID _pid;
-  ByteSlice _key;
-  Node* _parent;
-  std::vector<Node*> _children;
-  std::vector<Inode> _inodes;
+  // Get the index of a given child node.
+  int child_index(Node* child) const;
+
+  // Get the number of children.
+  int num_children() const;
+
+  // Get the next node with the same parent.
+  Node* next_sibling() const;
+
+  // Get previous node with the same parent.
+  Node* prev_sibling() const;
+
+  // Insert a key/value.
+  // TODO(gc): why needs pgid and old_key parameters.
+  void put(ByteSlice old_key, ByteSlice new_key, ByteSlice value, PageID pgid,
+           u32 flags);
+
+  void append(Node* child) { children_.push_back(child); }
+
+ private:
+  bool is_leaf_{};
+  bool unbalanced_{};
+  bool spilled_{};
+  PageID pgid_;
+  Bucket* bucket_;
+  Node* parent_;
+  ByteSlice key_;
+  std::vector<Node*> children_;
+  std::vector<Inode> inodes_;
 };
 
 }  // namespace boltdb

@@ -5,6 +5,7 @@
 #include <string>
 
 #include "boltdb/util/common.hpp"
+#include "boltdb/util/types.hpp"
 
 namespace boltdb {
 
@@ -40,6 +41,14 @@ class Bucket {
   static constexpr const f32 kDefaultFillPercent = 0.5;
 
   Bucket(Txn* txn);
+
+  // Creates a node from the specified page ID and attaches it to the given
+  // parent.
+  // Don't free this node, the bucket is responsible for keeping the memory
+  // clean.
+  Node* node(PageID pgid, Node* parent);
+
+  const Txn txn() const { return txn_; }
 
  private:
   BucketMeta bucket_meta_;

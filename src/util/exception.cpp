@@ -8,6 +8,8 @@ std::string exception_type_to_string(ExceptionType type) {
       return "Invalid";
     case ExceptionType::kIO:
       return "IO";
+    case ExceptionType::kNode:
+      return "Node";
     default:
       return "Unknown";
   }

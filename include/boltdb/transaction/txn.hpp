@@ -1,13 +1,51 @@
 #ifndef BOLTDB_CPP_TRANSACTION_HPP_
 #define BOLTDB_CPP_TRANSACTION_HPP_
 
-#include <chrono>
+#include <functional>
+#include <map>
 
 #include "boltdb/util/common.hpp"
+#include "boltdb/util/types.hpp"
 
 namespace boltdb {
 
-class Txn {};
+class DB;
+class Meta;
+class Bucket;
+class Page;
+class TxStats;
+
+// Tx represents a read-only or read/write transaction on the database.
+// Read-only transactions can be used for retrieving values for keys and
+// creating cursors. Read/write transactions can create and remove buckets and
+// create and remove keys.
+//
+// IMPORTANT: You must commit or rollback transactions when you are done with
+// them. Pages can not be reclaimed by the writer until no more transactions
+// are using them. A long running read transaction can cause the database to
+// quickly grow.
+class Txn {
+ public:
+  // WriteFlag specifies the flag for write-related methods like WriteTo().
+  // Tx opens the database file with the specified flag to copy the data.
+  //
+  // By default, the flag is unset, which works well for mostly in-memory
+  // workloads. For databases that are much larger than available RAM,
+  // set the flag to syscall.O_DIRECT to avoid trashing the page cache.
+  int write_flag;
+
+  Meta* meta() const { return meta_; }
+
+ private:
+  bool writable_;
+  bool managed_;
+  DB* db_;
+  Meta* meta_;
+  Bucket* bucket_;
+  std::map<PageID, Page*> pages_;
+  TxStats stats_;
+  std::function<void()> commit_handlers_;
+};
 
 // Tx represents a read-only or read/write transaction on the database.
 // Read-only transactions can be used for retrieving values for keys and

@@ -1,9 +1,24 @@
 #include "boltdb/storage/bucket.hpp"
 
-using namespace boltdb;
+#include "boltdb/storage/node.hpp"
 
-Bucket::Bucket(Transaction* txn) : _txn(txn) {}
+namespace boltdb {
 
-inline Transaction* Bucket::transaction() const { return _txn; }
+Bucket::Bucket(Txn* txn) : txn_(txn) {}
 
-inline PageID Bucket::root() const { return _bucket_meta.root; }
+Node* Bucket::node(PageID pgid, Node* parent) {
+  // Retrieve node if it's already been created.
+  if (node_cache_.find(pgid) != node_cache_.end()) {
+    return node_cache_[pgid];
+  }
+
+  Node* n = new Node(pgid, this, parent);
+
+  if (parent == nullptr) {
+    root_node_ = n;
+  } else {
+    parent->append(n);
+  }
+}
+
+}  // namespace boltdb
