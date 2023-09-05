@@ -48,7 +48,7 @@ class Bucket {
   // clean.
   Node* node(PageID pgid, Node* parent);
 
-  const Txn txn() const { return txn_; }
+  const Txn txn() const;
 
  private:
   BucketMeta bucket_meta_;

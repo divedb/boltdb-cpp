@@ -4,6 +4,7 @@
 #include <assert.h>
 
 #include <cstddef>
+#include <cstring>
 #include <initializer_list>
 #include <iterator>
 #include <span>
@@ -71,14 +72,6 @@ class ByteSlice {
   ByteSlice(ByteSlice&& other) noexcept;
   ByteSlice& operator=(ByteSlice&& other) noexcept;
 
-  // Get true if both slice contain same byte sequence.
-  bool equals(ByteSlice other) const;
-
-  // Compare other slice byte by byte.
-  // Return 1 if this slice > other, -1 if this slice < other.
-  // Otherwise return 0.
-  int bytes_compare(ByteSlice other) const;
-
   // Append a byte.
   ByteSlice& append(Byte v);
 
@@ -123,6 +116,32 @@ class ByteSlice {
   const Byte* data() const { return head_; }
 
   std::size_t cap() const { return std::distance(base_, cap_); }
+
+  friend bool operator==(const ByteSlice& lhs, const ByteSlice& rhs) {
+    if (lhs.size() != rhs.size()) {
+      return false;
+    }
+
+    return std::equal(lhs.head_, lhs.tail_, rhs.head_, rhs.tail_);
+  }
+
+  friend bool operator!=(const ByteSlice& lhs, const ByteSlice& rhs) {
+    return !(lhs == rhs);
+  }
+
+  // TODO(gc): simd acceleration
+  friend bool operator<(const ByteSlice& lhs, const ByteSlice& rhs) {
+    int sz1 = lhs.size();
+    int sz2 = rhs.size();
+
+    int res = std::memcmp(lhs.head_, lhs.head_, std::min(sz1, sz2));
+
+    if (res == 0) {
+      return sz1 < sz2;
+    }
+
+    return res < 0;
+  }
 
  private:
   void clear();

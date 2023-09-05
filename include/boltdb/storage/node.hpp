@@ -5,6 +5,7 @@
 #include <numeric>
 #include <vector>
 
+#include "boltdb/storage/page.hpp"
 #include "boltdb/util/common.hpp"
 #include "boltdb/util/slice.hpp"
 #include "boltdb/util/types.hpp"
@@ -68,10 +69,10 @@ class Node {
 
   // Get the child node at a given index.
   // TODO(gc): why not use children directly
-  Node* child_at(int index) const;
+  Node* child_at(int index);
 
   // Get the index of a given child node.
-  int child_index(Node* child) const;
+  int child_index(const Node* child) const;
 
   // Get the number of children.
   int num_children() const;
@@ -87,9 +88,15 @@ class Node {
   void put(ByteSlice old_key, ByteSlice new_key, ByteSlice value, PageID pgid,
            u32 flags);
 
+  // Remove a key from the node.
+  void remove(ByteSlice key);
+
   void append(Node* child) { children_.push_back(child); }
 
  private:
+  // Find the first satisfied index such that inodes_[index].key >= key.
+  int index_of(ByteSlice key);
+
   bool is_leaf_{};
   bool unbalanced_{};
   bool spilled_{};

@@ -2,6 +2,7 @@
 
 #include <exception>
 
+#include "boltdb/storage/bucket.hpp"
 #include "boltdb/storage/page.hpp"
 #include "boltdb/util/exception.hpp"
 #include "boltdb/util/util.hpp"
@@ -36,16 +37,16 @@ bool Node::is_size_less_than(int v) const {
   return true;
 }
 
-Node* Node::child_at(int index) const {
-  if (_is_leaf) {
+Node* Node::child_at(int index) {
+  if (is_leaf_) {
     std::string err = format("invalid child at (%d) on a leaf node", index);
     throw DBException(err);
   }
 
-  return bucket->node(_inodes[index].pgid, this);
+  return bucket_->node(inodes_[index].pgid, this);
 }
 
-int Node::child_index(Node* child) const {
+int Node::child_index(const Node* child) const {
   auto iter = std::lower_bound(
       inodes_.begin(), inodes_.end(), child->key_,
       [](ByteSlice lhs, ByteSlice rhs) { return lhs.bytes_compare(rhs) >= 0; });
@@ -93,6 +94,43 @@ void Node::put(ByteSlice old_key, ByteSlice new_key, ByteSlice value,
 
     throw NodeException(error);
   }
+
+  if (old_key.size() == 0) {
+    error = format("put: zero-length old key");
+
+    throw NodeException(error);
+  }
+
+  if (new_key.size() == 0) {
+    error = format("put: zero-length new key");
+
+    throw NodeException(error);
+  }
+
+  // Find insertion index.
+  int index = index_of(old_key);
+
+  // Add capacity and shift nodes if we don't have an exact match and need to
+  // insert.
+  auto exact = (!inodes_.empty() && index < inodes_.size() &&
+                inodes_[index].key == old_key);
+  if (!exact) {
+    auto iter = std::next(inodes_.begin(), index);
+    inodes_.insert(iter, Inode{});
+  }
+
+  inodes_[index].flags = flags;
+  inodes_[index].key = new_key;
+  inodes_[index].value = value;
+  inodes_[index].pgid = pgid;
+}
+
+void Node::remove(ByteSlice key) {}
+
+int Node::index_of(ByteSlice key) {
+  auto iter = std::lower_bound(inodes_.begin(), inodes_.end(), key);
+
+  int index = std::distance(inodes_.begin(), iter);
 }
 
 }  // namespace boltdb
