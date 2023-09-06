@@ -16,10 +16,10 @@ class Bucket;
 
 // Inode represents an internal node inside of a node.
 // It can be used to point to elements in a page or point to an element which
-// hasn't been added to a paget net.
+// hasn't been added to a page yet.
 // TODO(gc): any alternative to remove this structure?
 struct Inode {
-  uint32_t flags;
+  u32 flags;
   PageID pgid;
   ByteSlice key;
   ByteSlice value;
@@ -90,6 +90,12 @@ class Node {
 
   // Remove a key from the node.
   void remove(ByteSlice key);
+
+  // Initializes the node from a page.
+  void read(Page* page);
+
+  // Writes the items onto one or more pages.
+  void write(Page* page);
 
   void append(Node* child) { children_.push_back(child); }
 

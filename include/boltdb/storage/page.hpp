@@ -28,9 +28,9 @@ class BranchPageElement;
 
 class PageHeader {
  public:
-  PageHeader(PageID pid, PageFlag flag) : pid(pid), flag(flag) {}
+  PageHeader(PageID pgid, PageFlag flag) : pgid(pgid), flag(flag) {}
 
-  PageID pid;      // 8 bytes, page id
+  PageID pgid;     // 8 bytes, page id
   PageFlag flag;   // 2 bytes, identify page type
   u16 count{};     // 2 bytes
   u32 overflow{};  // 4 bytes, number of overflow pages
@@ -42,23 +42,25 @@ class Page {
  public:
   Page(PageID pid, PageFlag flag, int page_size);
 
-  // Get page flag.
+  // Get and set page flag.
   PageFlag flag() const { return pheader_.flag; }
+  void set_flag(PageFlag flag) { pheader_.flag = flag; }
 
-  // Get number of leaf page elements.
+  // Get and set number of leaf page elements.
   u16 count() const { return pheader_.count; }
+  void set_count(u16 count) { pheader_.count = count; }
 
   // Get number of overflow pages.
   u32 overflow() const { return pheader_.overflow; }
 
   // Get page id.
-  PageID pid() const { return pheader_.pid; }
+  PageID id() const { return pheader_.pgid; }
 
   // Get a human readable page type string used for debugging.
   std::string type() const;
 
   // Get underlying page data.
-  const Byte* data() const { return pdata_.data(); }
+  Byte* data() { return pdata_.data(); }
 
   // Get page size in bytes.
   std::size_t page_size() const { return page_size_; }
@@ -97,7 +99,7 @@ class BranchPageElement {
 
   u32 pos() const { return pos_; }
   u32 key_size() const { return key_size_; }
-  PageID pid() const { return pid_; }
+  PageID id() const { return pid_; }
 
   // Get a byte slice of the node key.
   ByteSlice key() const;

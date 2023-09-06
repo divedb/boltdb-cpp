@@ -125,7 +125,74 @@ void Node::put(ByteSlice old_key, ByteSlice new_key, ByteSlice value,
   inodes_[index].pgid = pgid;
 }
 
-void Node::remove(ByteSlice key) {}
+void Node::remove(ByteSlice key) {
+  int index = index_of(key);
+
+  // Exit if the key isn't found.
+  if (index >= inodes_.size() || key != inodes_[index].key) {
+    return;
+  }
+
+  // Delete inode from the node.
+  auto iter = std::next(inodes_.begin(), index);
+  inodes_.erase(iter);
+
+  // Mark the node as needing rebalancing.
+  // TODO(gc): why
+  unbalanced_ = true;
+}
+
+void Node::read(Page* page) {
+  pgid_ = page->id();
+  is_leaf_ = (page->flag() & PageFlag::kLeaf) != 0;
+  inodes_.reserve(page->count());
+
+  if (is_leaf_) {
+    for (int i = 0; i < page->count(); i++) {
+      auto element = page->leaf_page_element(i);
+      inodes_.push_back(Inode{.flags = element->flags(),
+                              .key = element->key(),
+                              .value = element->value()});
+    }
+  } else {
+    for (int i = 0; i < page->count(); i++) {
+      auto element = page->branch_page_element(i);
+      inodes_.push_back(Inode{.pgid = element->id(), .key = element->key()});
+    }
+  }
+
+  // Save first key so we can find the node in the parent when we spill.
+  if (inodes_.size() > 0) {
+    key_ = inodes_[0].key;
+
+    assert(key_.size() > 0);
+  }
+}
+
+void Node::write(Page* page) {
+  // Initialize page.
+  if (is_leaf_) {
+    page->set_flag(PageFlag::kLeaf);
+  } else {
+    page->set_flag(PageFlag::kBranch);
+  }
+
+  // TODO(gc): why limit this?
+  auto size = inodes_.size();
+
+  if (size >= 0xFFFF) {
+    std::string error =
+        format("inode overflow: %d (pgid=%d)", size, page->id());
+    throw NodeException(error);
+  }
+
+  page->set_count(inodes_.size());
+
+  // Stop here if there are no items to write.
+  if (page->count() == 0) {
+    return;
+  }
+}
 
 int Node::index_of(ByteSlice key) {
   auto iter = std::lower_bound(inodes_.begin(), inodes_.end(), key);
