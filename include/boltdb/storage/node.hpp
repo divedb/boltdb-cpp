@@ -8,6 +8,7 @@
 #include "boltdb/storage/page.hpp"
 #include "boltdb/util/common.hpp"
 #include "boltdb/util/slice.hpp"
+#include "boltdb/util/status.hpp"
 #include "boltdb/util/types.hpp"
 
 namespace boltdb {
@@ -102,6 +103,23 @@ class Node {
  private:
   // Find the first satisfied index such that inodes_[index].key >= key.
   int index_of(ByteSlice key);
+
+  // Writes the nodes to dirty pages and splits nodes as it goes.
+  // Return an error if the dirty pages cannot be allocated.
+  Status spill();
+
+  // Breaks up a node into multiple smaller nodes, if appropriate.
+  // This should only be called from the `spill()` function.
+  std::vector<Node*> split(int page_size);
+
+  // Breaks up a node into two smaller nodes, if appropriate.
+  // This should only be called from the `split()` function.
+  std::pair<Node*, Node*> split_two(int page_size);
+
+  // Finds the position where a page will fill a given threshold.
+  // It returns the index as well as the size of the first page.
+  // This is only be called from split().
+  std::pair<int, int> split_index(int threshold);
 
   bool is_leaf_{};
   bool unbalanced_{};

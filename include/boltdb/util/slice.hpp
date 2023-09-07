@@ -114,6 +114,7 @@ class ByteSlice {
 
   // Get a readable only view on this slice.
   const Byte* data() const { return head_; }
+  Byte* data() { return head_; }
 
   std::size_t cap() const { return std::distance(base_, cap_); }
 
@@ -141,6 +142,10 @@ class ByteSlice {
     }
 
     return res < 0;
+  }
+
+  friend bool operator>=(const ByteSlice& lhs, const ByteSlice& rhs) {
+    return !(lhs < rhs);
   }
 
  private:

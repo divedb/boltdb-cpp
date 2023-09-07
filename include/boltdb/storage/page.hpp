@@ -60,6 +60,7 @@ class Page {
   std::string type() const;
 
   // Get underlying page data.
+  const Byte* data() const { return pdata_.data(); }
   Byte* data() { return pdata_.data(); }
 
   // Get page size in bytes.
@@ -94,35 +95,22 @@ class Page {
 // BranchPageElement represents a node on a branch page.
 class BranchPageElement {
  public:
-  BranchPageElement(u32 pos, u32 key_size, PageID pid)
-      : pos_(pos), key_size_(key_size), pid_(pid) {}
-
-  u32 pos() const { return pos_; }
-  u32 key_size() const { return key_size_; }
-  PageID id() const { return pid_; }
+  BranchPageElement(u32 pos, u32 key_size, PageID pgid)
+      : pos(pos), key_size(key_size), pgid(pgid) {}
 
   // Get a byte slice of the node key.
   ByteSlice key() const;
 
- private:
-  u32 pos_;
-  u32 key_size_;
-  PageID pid_;
+  u32 pos;
+  u32 key_size;
+  PageID pgid;
 };
 
 // LeafPageElement represents a node on a leaf page.
 class LeafPageElement {
  public:
   LeafPageElement(u32 flags, u32 pos, u32 key_size, u32 value_size)
-      : flags_(flags),
-        pos_(pos),
-        key_size_(key_size),
-        value_size_(value_size) {}
-
-  u32 flags() const { return flags_; }
-  u32 pos() const { return pos_; }
-  u32 key_size() const { return key_size_; }
-  u32 value_size() const { return value_size_; }
+      : flags(flags), pos(pos), key_size(key_size), value_size(value_size) {}
 
   // Get a byte slice of the node key.
   ByteSlice key() const;
@@ -130,13 +118,13 @@ class LeafPageElement {
   // Get a byte slice of the node value.
   ByteSlice value() const;
 
- private:
-  u32 flags_;
-  u32 pos_;
-  u32 key_size_;
-  u32 value_size_;
+  u32 flags;
+  u32 pos;
+  u32 key_size;
+  u32 value_size;
 };
 
+static constexpr const int kMinKeysPerPage = 2;
 static constexpr const int kPageHeaderSize = sizeof(PageHeader);
 static constexpr const int kBranchPageElementSize = sizeof(BranchPageElement);
 static constexpr const int kLeafPageElementSize = sizeof(LeafPageElement);
