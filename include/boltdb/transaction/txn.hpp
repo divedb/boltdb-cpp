@@ -36,6 +36,13 @@ class Txn {
 
   Meta* meta() const { return meta_; }
 
+  // Get a reference to the page with a given page id.
+  // If page has been written to then a temporary buffered page is returned.
+  Page* page(PageID pgid);
+
+ public:
+  TxStats stats{};
+
  private:
   bool writable_;
   bool managed_;
@@ -43,7 +50,6 @@ class Txn {
   Meta* meta_;
   Bucket* bucket_;
   std::map<PageID, Page*> pages_;
-  TxStats stats_;
   std::function<void()> commit_handlers_;
 };
 

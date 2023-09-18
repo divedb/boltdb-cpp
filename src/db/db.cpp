@@ -59,10 +59,15 @@ Status DB::init() const {
 
     file_handle_->fdatasync();
   } catch (const IOException& e) {
-    compute_checksum return {kStatusErr, e.what()};
+    return {kStatusErr, e.what()};
   }
 
   return {};
+}
+
+Page* DB::page(PageID pgid) { auto offset = pgid * page_size_; 
+
+  
 }
 
 Status open_db(std::string path, Options options, DB** out_db) {

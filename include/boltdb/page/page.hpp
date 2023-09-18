@@ -12,6 +12,8 @@
 
 namespace boltdb {
 
+class FreeList;
+
 enum PageFlag : u16 {
   kBranch = 0x01,
   kLeaf = 0x02,
@@ -82,6 +84,8 @@ class Page {
   void hexdump(int n) const;
 
  private:
+  friend class FreeList;
+
   Byte* skip_page_header() const;
 
   template <typename T>

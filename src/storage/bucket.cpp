@@ -21,4 +21,8 @@ Node* Bucket::node(PageID pgid, Node* parent) {
   }
 }
 
+std::pair<Page*, Node*> Bucket::page_node(PageID pgid) { 
+  if (root_node_)
+}
+
 }  // namespace boltdb

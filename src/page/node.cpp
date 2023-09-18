@@ -5,6 +5,7 @@
 
 #include "boltdb/storage/bucket.hpp"
 #include "boltdb/storage/page.hpp"
+#include "boltdb/transaction/txn.hpp"
 #include "boltdb/util/exception.hpp"
 #include "boltdb/util/util.hpp"
 
@@ -284,6 +285,42 @@ std::pair<Node*, Node*> Node::split_two(int page_size) {
   if (inodes_.size() <= 2 * kMinKeysPerPage || is_size_less_than(page_size)) {
     return std::make_pair(this, nullptr);
   }
+
+  // Determine the threshold before starting a new node.
+  // Fill percent must be in the range [kMinFillPercent, kMaxFillPercent].
+  f64 fill_percent = bucket_->fill_percent();
+  fill_percent = std::max(fill_percent, Bucket::kMinFillPercent);
+  fill_percent = std::min(fill_percent, Bucket::kMaxFillPercent);
+
+  int threshold = static_cast<int>(page_size * fill_percent);
+
+  // Determine split position and sizes of the two pages.
+  auto [index, _] = split_index(threshold);
+
+  // Split node into two separate nodes.
+  // If there's no parent then we'll need to create one.
+  if (parent_ == nullptr) {
+    parent_ = new Node(0, bucket_, nullptr);
+    parent_->children_.push_back(this);
+  }
+
+  // Create a new node and add it to the parent.
+  Node* next = new Node(0, bucket_, parent_);
+  next->is_leaf_ = is_leaf_;
+  parent_->children_.push_back(next);
+
+  // Split inodes across two nodes.
+  auto iter = std::next(inodes_.begin(), index);
+  int size = std::distance(iter, inodes_.end());
+  next->inodes_.resize(size);
+
+  std::copy(iter, inodes_.end(), next->inodes_.begin());
+  inodes_.resize(index);
+
+  // Update the statistics.
+  bucket_->txn()->stats.split++;
+
+  return std::make_pair(this, next);
 }
 
 std::pair<int, int> Node::split_index(int threshold) {

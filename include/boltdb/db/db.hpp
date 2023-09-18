@@ -93,7 +93,10 @@ class DB {
   DB& operator=(DB&& other) noexcept;
 
   // Get the path to currently open database file.
-  [[nodiscard]] std::string path() const { return file_handle_->path; }
+  std::string path() const { return file_handle_->path; }
+
+  // Get a page reference from the mmap based on the current page size.
+  Page* page(PageID pgid);
 
   friend Status open_db(std::string path, Options options, DB** out_db);
 
@@ -111,6 +114,7 @@ class DB {
 
   FileHandle* lock_file_;  // windows only
   Byte* dataref_;          // mmap'ed readonly, write throws SEGV
+  Byte* data_;
   int data_size_;
   int file_size_;  // current on disk file size
   Meta meta0_;

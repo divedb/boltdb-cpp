@@ -33,8 +33,8 @@ class Bucket {
   // TODO(gc): why subtract 2
   static constexpr const u32 kMaxValueSize = (1U << 31) - 2;
 
-  static constexpr const f32 kMinFillPercent = 0.1;
-  static constexpr const f32 kMaxFillPercent = 1.0;
+  static constexpr const f64 kMinFillPercent = 0.1;
+  static constexpr const f64 kMaxFillPercent = 1.0;
 
   // DefaultFillPercent is the percentage that split pages are filled.
   // This value can be changed by setting Bucket.FillPercent.
@@ -48,7 +48,14 @@ class Bucket {
   // clean.
   Node* node(PageID pgid, Node* parent);
 
-  const Txn txn() const;
+  const Txn* txn() const { return txn_; }
+  Txn* txn() { return txn_; }
+
+  f64 fill_percent() const { return fill_percent_; }
+
+  // Get in-memory node, if it exists.
+  // Otherwise returns the underlying page.
+  std::pair<Page*, Node*> page_node(PageID pgid);
 
  private:
   BucketMeta bucket_meta_;

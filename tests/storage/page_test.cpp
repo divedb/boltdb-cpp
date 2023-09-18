@@ -1,4 +1,4 @@
-#include "boltdb/storage/page.hpp"
+#include "boltdb/page/page.hpp"
 
 #include <gtest/gtest.h>
 

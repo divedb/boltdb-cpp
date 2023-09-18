@@ -1,0 +1,6 @@
+#ifndef BOLTDB_CPP_PORT_CONFIG_HPP_
+#define BOLTDB_CPP_PORT_CONFIG_HPP_
+
+
+
+#endif
