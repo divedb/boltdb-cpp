@@ -1,6 +1,7 @@
 #ifndef BOLTDB_CPP_UTIL_STATUS_HPP_
 #define BOLTDB_CPP_UTIL_STATUS_HPP_
 
+#include <iostream>
 #include <string>
 
 #include "boltdb/util/types.hpp"

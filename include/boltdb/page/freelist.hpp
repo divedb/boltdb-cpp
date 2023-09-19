@@ -28,21 +28,10 @@ class FreeList {
 
   // Get count of pending pages.
   int pending_count() const {
-    return std::accumulate(pending_.begin(), pending_.end(), 0,
-                           [](int init, const std::vector<PageID>& pgids) {
-                             return init + pgids.size();
-                           });
+    return std::accumulate(
+        pending_.begin(), pending_.end(), 0,
+        [](int init, const auto& entry) { return init + entry.second.size(); });
   }
-
-  // Get sorted free pagd ids, this also includes the pending pages.
-  std::vector<PageID> sorted_free_pgids() const;
-
-  // Get the starting page id of a contiguous pages of a given size.
-  // If a contiguous block cannot be found then 0 is returned.
-  PageID allocate_contiguous(int n);
-
-  // Copies into dst of all free ids and all pending ids in one sorted list.
-  std::vector<PageID> sorted_free_pages() const;
 
   // Get the starting page id of a contiguous list of pages of a given size.
   // If a contiguous block cannot be found then 0 is returned.
@@ -50,13 +39,13 @@ class FreeList {
 
   // Release a page and its overflow for a given transaction id.
   // If the page is already free then a panic will occur.
-  void free(TxnID txid, Page* p);
+  void free(TxnID txn_id, Page* p);
 
   // Moves all page ids for a transaction id (or older) to the freelist.
-  void release(TxnID txid);
+  void release(TxnID txn_id);
 
   // Removes the pages from the given pending tx.
-  void rollback(TxnID txid);
+  void rollback(TxnID txn_id);
 
   // Check whether a given page is in the free list.
   bool is_freed(PageID pgid) const;
@@ -87,6 +76,9 @@ class FreeList {
 
   std::vector<PageID> sorted_pending_pgids_impl(
       const std::function<bool(TxnID)>& pred) const;
+
+  // Merge the specified sorted free page ids into `ids_`.
+  void merge(const std::vector<PageID>& sorted_free_pgids);
 
   // All free and available free page ids.
   std::vector<PageID> ids_;

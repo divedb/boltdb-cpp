@@ -6,8 +6,8 @@
 #include <vector>
 
 #include "boltdb/fs/file_system.hpp"
+#include "boltdb/page/page.hpp"
 #include "boltdb/storage/bucket.hpp"
-#include "boltdb/storage/page.hpp"
 #include "boltdb/transaction/txn.hpp"
 #include "boltdb/util/common.hpp"
 #include "boltdb/util/options.hpp"
@@ -35,22 +35,9 @@ class Meta {
 
   // Checks the marker bytes and version of the meta page to ensure it matches
   // this binary.
-  Status validate() const {
-    if (magic != DB::kMagic) {
-      return {kStatusErr, "Invalid magic"};
-    }
+  Status validate() const;
 
-    if (version != DB::kVersion) {
-      return {kStatusErr, "Invalid version"};
-    }
-
-    auto read_checksum = checksum;
-    if (read_checksum != sum64()) {
-      return {kStatusCorrupt, "Invalid checksum"};
-    }
-
-    return {};
-  }
+  bool equals(const Meta& other) const;
 
   u32 magic;
   u32 version;
@@ -96,7 +83,7 @@ class DB {
   std::string path() const { return file_handle_->path; }
 
   // Get a page reference from the mmap based on the current page size.
-  Page* page(PageID pgid);
+  Page* page(PageID pgid) const;
 
   friend Status open_db(std::string path, Options options, DB** out_db);
 

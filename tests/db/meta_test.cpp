@@ -20,7 +20,7 @@ TEST(MetaTest, SerializeAndDeserialize) {
             .freelist = 2,
             .pgid = 0,
             .txid = 0};
-  meta.compute_checksum();
+  meta.sum64();
 
   ByteSlice slice = Meta::serialize(meta);
   Meta new_meta = Meta::deserialize(slice);

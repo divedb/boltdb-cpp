@@ -5,6 +5,16 @@
 
 namespace boltdb {
 
+// TODO(gc): makes this template function more general, not limited to vector.
+template <typename T>
+std::vector<T> merge_two(const std::vector<T>& v1, const std::vector<T>& v2) {
+  std::vector<T> result(v1.size() + v2.size());
+
+  std::merge(v1.begin(), v1.end(), v2.begin(), v2.end(), result.begin());
+
+  return result;
+}
+
 int FreeList::size() const {
   auto n = count();
 
@@ -35,21 +45,23 @@ PageID FreeList::allocate_contiguous(int n) {
     }
 
     // Reset initial page if this is not contiguous.
-    // Don't need to check `prev_id == 0` condition since id must >= 2
+    // Don't need to check `prev_id == 0` condition since id must >= 2.
     if (id - prev_id != 1) {
       first = iter;
     }
 
     // If we found a contiguous block then remove it and return it.
     if (std::distance(first, iter) + 1 == n) {
+      auto first_id = *first;
+
       ids_.erase(first, iter);
 
       // Remove from the free cache.
       for (int j = 0; j < n; j++) {
-        cache_.erase(j + initial);
+        cache_.erase(j + first_id);
       }
 
-      return *first;
+      return first_id;
     }
 
     prev_id = id;
@@ -58,7 +70,7 @@ PageID FreeList::allocate_contiguous(int n) {
   return 0;
 }
 
-void FreeList::free(TxnID txid, Page* p) {
+void FreeList::free(TxnID txn_id, Page* p) {
   // TODO(gc): why this is 1, not 2 since we have 2 meta pages and 1 freelist
   // page.
   auto id = p->id();
@@ -75,57 +87,55 @@ void FreeList::free(TxnID txid, Page* p) {
       throw DBException(error);
     }
 
-    pending_[txid].push_back(i);
+    pending_[txn_id].push_back(i);
     cache_[i] = true;
   }
 }
 
-void FreeList::release(TxnID txid) {
-  std::vector<PageID> sorted_pgids;
-  std::vector<TxnID> erase_txids;
+void FreeList::release(TxnID txn_id) {
+  std::vector<TxnID> txn_ids;
+  txn_ids.reserve(pending_.size());
 
-  std::for_each(pending_.begin(), pending_.end(), [&](auto&& iter) {
-    if (iter.first <= txid) {
-      erase_txids.push_back(iter.first);
-      sorted_pgids.insert(sorted_pgids.end(), iter.second.begin(),
-                          iter.second.end());
+  // Sort the pending page ids and collect the transaction ids that needs to be
+  // removed.
+  auto pgids = sorted_pending_pgids_impl([&txn_ids, txn_id](TxnID id) {
+    if (id <= txn_id) {
+      txn_ids.push_back(id);
+
+      return true;
     }
+
+    return false;
   });
 
-  std::sort(sorted_pgids.begin(), sorted_pgids.end());
-
-  for (auto&& id : erase_txids) {
+  for (auto id : txn_ids) {
     pending_.erase(id);
   }
 
-  std::vector<PageID> tmp(ids_);
-  ids_.resize(tmp.size() + sorted_pgids.size());
-  std::merge(tmp.begin(), tmp.end(), sorted_pgids.begin(), sorted_pgids.end(),
-             ids_.begin());
+  ids_ = merge_two(pgids, ids_);
 }
 
-void FreeList::rollback(TxnID txid) {
+void FreeList::rollback(TxnID txn_id) {
   // Remove page ids from cache.
-  for (auto id : pending_[txid]) {
+  for (auto id : pending_[txn_id]) {
     cache_.erase(id);
   }
 
   // Remove pages from pending list.
   // TODO(gc): how about the modification on the pages.
-  pending_.erase(txid);
+  pending_.erase(txn_id);
 }
 
 bool FreeList::is_freed(PageID pgid) const {
   return cache_.find(pgid) != cache_.end();
 }
 
+// TODO(gc): do we need to update `pending_`.
 void FreeList::read_from(Page* page) {
-  int index = 0;
   int count = page->count();
   Byte* base = page->skip_page_header();
 
   if (count == kSpecialCount) {
-    index = 1;
     count = *reinterpret_cast<PageID*>(base);
     base = std::next(base, sizeof(PageID));
   }
@@ -139,11 +149,9 @@ void FreeList::read_from(Page* page) {
     ids_.resize(count);
 
     std::copy(first, last, ids_.begin());
-    // Make sure they're sorted.
     std::sort(ids_.begin(), ids_.end());
   }
 
-  // Rebuild the page cache.
   reindex();
 }
 
@@ -156,19 +164,19 @@ Status FreeList::write_to(Page* page) {
 
   // Suppose the page size is 4K and size of PageID is 8,
   // the maximum number of ids is 512 (ignore the page header).
-  int cnt = count();
+  int n = count();
   Byte* base = page->skip_page_header();
-  PageID* first = reinterpret_cast<PageID*>(base);
+  auto first = reinterpret_cast<PageID*>(base);
 
-  if (cnt < kSpecialCount) {
-    page->set_count(cnt);
+  if (n < kSpecialCount) {
+    page->set_count(n);
   } else {
     page->set_count(kSpecialCount);
-    *first = cnt;
+    *first = n;
     first = std::next(first, sizeof(PageID));
   }
 
-  std::vector<PageID> pgids = sorted_free_pages();
+  std::vector<PageID> pgids = merge_two(ids_, sorted_pending_pgids());
   std::copy(pgids.begin(), pgids.end(), first);
 
   return {};
@@ -188,14 +196,12 @@ void FreeList::reload(Page* page) {
 
   // Check each page in the freelist and build a new available freelist with any
   // pages not int the pending lists.
-  std::vector<PageID> tmp;
-  tmp.reserve(ids_.size());
-
-  std::copy_if(
-      ids_.begin(), ids_.end(), std::back_insert_iterator(tmp),
+  // Note that, we could do this in place.
+  auto last = std::copy_if(
+      ids_.begin(), ids_.end(), ids_.begin(),
       [&pcache](PageID id) { return pcache.find(id) == pcache.end(); });
 
-  ids_ = tmp;
+  ids_.resize(std::distance(ids_.begin(), last));
 
   // Once the available list is rebuilt then rebuild the free cache so that it
   // includes the available and pending free pages.

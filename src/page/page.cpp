@@ -1,4 +1,4 @@
-#include "boltdb/storage/page.hpp"
+#include "boltdb/page/page.hpp"
 
 #include <iostream>
 #include <sstream>
@@ -22,7 +22,7 @@ Byte* advance_n_bytes(const T* p, std::size_t n) {
 Page::Page(PageID pid, PageFlag flag, int page_size)
     : pheader_(pid, flag), page_size_(page_size) {
   pdata_.reserve(page_size_);
-  binary::BigEndian::append_variadic_uint(pdata_, pheader_.pid,
+  binary::BigEndian::append_variadic_uint(pdata_, pheader_.pgid,
                                           static_cast<u16>(pheader_.flag),
                                           pheader_.count, pheader_.overflow);
 }
@@ -101,21 +101,21 @@ inline T* Page::cast_ptr() const {
 }
 
 ByteSlice BranchPageElement::key() const {
-  Byte* key = advance_n_bytes(this, pos_);
+  Byte* key = advance_n_bytes(this, pos);
 
-  return {key, key + key_size_};
+  return {key, key + key_size};
 }
 
 ByteSlice LeafPageElement::key() const {
-  Byte* key = advance_n_bytes(this, pos_);
+  Byte* key = advance_n_bytes(this, pos);
 
-  return {key, key + key_size_};
+  return {key, key + key_size};
 }
 
 ByteSlice LeafPageElement::value() const {
-  Byte* value = advance_n_bytes(this, pos_ + key_size_);
+  Byte* value = advance_n_bytes(this, pos + key_size);
 
-  return {value, value + value_size_};
+  return {value, value + value_size};
 }
 
 }  // namespace boltdb

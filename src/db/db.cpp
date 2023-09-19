@@ -65,9 +65,12 @@ Status DB::init() const {
   return {};
 }
 
-Page* DB::page(PageID pgid) { auto offset = pgid * page_size_; 
+Page* DB::page(PageID pgid) const {
+  auto offset = pgid * page_size_;
 
-  
+  (void)offset;
+
+  return nullptr;
 }
 
 Status open_db(std::string path, Options options, DB** out_db) {
@@ -115,6 +118,8 @@ Status open_db(std::string path, Options options, DB** out_db) {
     ssize_t bytes_read = db->file_handle_->read(
         const_cast<Byte*>(buffer.data()), buffer.size(), 0);
     Meta meta = Meta::deserialize(buffer);
+
+    (void)bytes_read;
 
     if (status = meta.validate(); !status.ok()) {
       // If we can't read the page size, we can assume it's the same
@@ -173,6 +178,31 @@ u64 Meta::sum64() const {
   write_aux(slice);
 
   return crc64_be(0, slice.data(), slice.size());
+}
+
+Status Meta::validate() const {
+  if (magic != DB::kMagic) {
+    return {kStatusErr, "Invalid magic"};
+  }
+
+  if (version != DB::kVersion) {
+    return {kStatusErr, "Invalid version"};
+  }
+
+  auto read_checksum = checksum;
+  if (read_checksum != sum64()) {
+    return {kStatusCorrupt, "Invalid checksum"};
+  }
+
+  return {};
+}
+
+bool Meta::equals(const Meta& other) const {
+  return magic == other.magic && version == other.version &&
+         page_size == other.page_size && flags == other.flags &&
+         root.root == other.root.root && root.sequence == other.root.sequence &&
+         freelist == other.freelist && pgid == other.pgid &&
+         txid == other.txid && checksum == other.checksum;
 }
 
 void Meta::write(ByteSlice& slice) const {
