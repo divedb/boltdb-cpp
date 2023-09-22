@@ -130,6 +130,16 @@ bool FreeList::is_freed(PageID pgid) const {
   return cache_.find(pgid) != cache_.end();
 }
 
+bool FreeList::is_pending(TxnID txn_id, PageID pgid) const {
+  if (pending_.find(txn_id) == pending_.end()) {
+    return false;
+  }
+
+  auto& pgids = pending_.at(txn_id);
+
+  return std::find(pgids.begin(), pgids.end(), pgid) != pgids.end();
+}
+
 // TODO(gc): do we need to update `pending_`.
 void FreeList::read_from(Page* page) {
   int count = page->count();
@@ -235,9 +245,9 @@ std::vector<PageID> FreeList::sorted_pending_pgids_impl(
   std::vector<PageID> result(n);
   auto d_first = std::back_inserter(result);
 
-  for (auto&& [_, pgid_vec] : pending_) {
+  for (auto&& [tid, pgid_vec] : pending_) {
     d_first = std::copy_if(pgid_vec.begin(), pgid_vec.end(), d_first,
-                           [pred](TxnID tid) { return pred(tid); });
+                           [pred, tid](PageID) { return pred(tid); });
   }
 
   std::sort(result.begin(), result.end());

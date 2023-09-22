@@ -62,9 +62,13 @@ class Person {
  public:
   void foo();
 };
+#include <algorithm>
 
 int main() {
-  function<int()> a;
+  vector<int> a;
+  vector<int> b;
+
+  std::copy(a.begin(), a.end(), b.begin());
 
   cout << is_function_v<decltype(a)> << endl;
   cout << is_function_v<int()> << endl;

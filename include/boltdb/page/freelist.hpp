@@ -47,8 +47,14 @@ class FreeList {
   // Removes the pages from the given pending tx.
   void rollback(TxnID txn_id);
 
-  // Check whether a given page is in the free list.
+  // Return true if the specified page id is in the free list.
+  // Otherwise return false.
   bool is_freed(PageID pgid) const;
+
+  // Return true if the specified page id is in the pending list of the given
+  // transaction id.
+  // Otherwise return false.
+  bool is_pending(TxnID txn_id, PageID pgid) const;
 
   // Initializes the freelist from a freelist page.
   void read_from(Page* page);

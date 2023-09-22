@@ -44,19 +44,16 @@ class Page {
  public:
   Page(PageID pid, PageFlag flag, int page_size);
 
-  // Get and set page flag.
+  // Accessor.
   PageFlag flag() const { return pheader_.flag; }
-  void set_flag(PageFlag flag) { pheader_.flag = flag; }
-
-  // Get and set number of leaf page elements.
   u16 count() const { return pheader_.count; }
-  void set_count(u16 count) { pheader_.count = count; }
-
-  // Get number of overflow pages.
   u32 overflow() const { return pheader_.overflow; }
-
-  // Get page id.
   PageID id() const { return pheader_.pgid; }
+
+  // Modifier.
+  void set_flag(PageFlag flag) { pheader_.flag = flag; }
+  void set_count(u16 count) { pheader_.count = count; }
+  void set_overflow(u32 overflow) { pheader_.overflow = overflow; }
 
   // Get a human readable page type string used for debugging.
   std::string type() const;
