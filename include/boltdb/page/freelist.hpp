@@ -17,6 +17,10 @@ namespace boltdb {
 // transactions.
 class FreeList {
  public:
+  FreeList() = default;
+
+  FreeList(std::vector<PageID> ids) : ids_(std::move(ids)) {}
+
   // Get the size of the page after serialization in bytes.
   int size() const;
 

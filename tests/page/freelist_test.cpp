@@ -55,6 +55,48 @@ TEST(FreeListTest, Release) {
   }
 }
 
+TEST(FreeListTest, AllocateContiguous) {
+  vector<PageID> pgids{3, 4, 5, 6, 7, 9, 12, 13, 18};
+  FreeList freelist(pgids);
+
+  PageID pid = freelist.allocate_contiguous(3);
+  EXPECT_EQ(3, pid);
+
+  pid = freelist.allocate_contiguous(1);
+  EXPECT_EQ(6, pid);
+
+  pid = freelist.allocate_contiguous(3);
+  EXPECT_EQ(0, pid);
+
+  pid = freelist.allocate_contiguous(2);
+  EXPECT_EQ(2, pid);
+
+  pid = freelist.allocate_contiguous(1);
+  EXPECT_EQ(7, pid);
+
+  pid = freelist.allocate_contiguous(0);
+  EXPECT_EQ(0, pid);
+
+  pid = freelist.allocate_contiguous(0);
+  EXPECT_EQ(0, pid);
+
+  EXPECT_TRUE(freelist.is_freed(9));
+  EXPECT_TRUE(freelist.is_freed(18));
+
+  pid = freelist.allocate_contiguous(1);
+  EXPECT_EQ(9, pid);
+
+  pid = freelist.allocate_contiguous(1);
+  EXPECT_EQ(18, pid);
+
+  pid = freelist.allocate_contiguous(1);
+  EXPECT_EQ(0, pid);
+
+  for (auto id : pgids) {
+    EXPECT_FALSE(freelist.is_freed(id));
+  }
+}
+
 int main(int argc, char** argv) {
   ::testing::InitGoogleTest(&argc, argv);
 

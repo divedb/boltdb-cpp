@@ -54,7 +54,7 @@ PageID FreeList::allocate_contiguous(int n) {
     if (std::distance(first, iter) + 1 == n) {
       auto first_id = *first;
 
-      ids_.erase(first, iter);
+      ids_.erase(first, ++iter);
 
       // Remove from the free cache.
       for (int j = 0; j < n; j++) {
@@ -245,9 +245,10 @@ std::vector<PageID> FreeList::sorted_pending_pgids_impl(
   std::vector<PageID> result(n);
   auto d_first = std::back_inserter(result);
 
-  for (auto&& [tid, pgid_vec] : pending_) {
+  for (auto [tid, pgid_vec] : pending_) {
+    auto id = tid;
     d_first = std::copy_if(pgid_vec.begin(), pgid_vec.end(), d_first,
-                           [pred, tid](PageID) { return pred(tid); });
+                           [pred, id](PageID) { return pred(id); });
   }
 
   std::sort(result.begin(), result.end());
