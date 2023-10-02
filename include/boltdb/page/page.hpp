@@ -80,10 +80,11 @@ class Page {
 
   void hexdump(int n) const;
 
+  Byte* skip_page_header();
+  const Byte* skip_page_header() const;
+
  private:
   friend class FreeList;
-
-  Byte* skip_page_header() const;
 
   template <typename T>
   T* cast_ptr() const;

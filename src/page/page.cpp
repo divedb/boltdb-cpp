@@ -77,7 +77,7 @@ std::span<BranchPageElement> Page::branch_page_elements() const {
 
 void Page::hexdump(int n) const {
   std::ostringstream oss;
-  Byte* base = skip_page_header();
+  const Byte* base = skip_page_header();
 
   // TODO(gc): avoid large n
   for (int i = 0; i < n; i++) {
@@ -89,13 +89,18 @@ void Page::hexdump(int n) const {
 }
 
 // Get base ptr, which excludes the page header.
-inline Byte* Page::skip_page_header() const {
+Byte* Page::skip_page_header() {
   return advance_n_bytes(data(), kPageHeaderSize);
 }
 
+const Byte* Page::skip_page_header() const {
+  return advance_n_bytes(data(), kPageHeaderSize);
+}
+
+// TODO(gc): any better representation?
 template <typename T>
-inline T* Page::cast_ptr() const {
-  Byte* base = skip_page_header();
+T* Page::cast_ptr() const {
+  Byte* base = const_cast<Byte*>(skip_page_header());
 
   return reinterpret_cast<T*>(base);
 }

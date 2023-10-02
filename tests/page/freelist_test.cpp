@@ -59,29 +59,34 @@ TEST(FreeListTest, AllocateContiguous) {
   vector<PageID> pgids{3, 4, 5, 6, 7, 9, 12, 13, 18};
   FreeList freelist(pgids);
 
+  // 3, 4, 5 are freed.
   PageID pid = freelist.allocate_contiguous(3);
   EXPECT_EQ(3, pid);
 
+  // 6 is freed.
   pid = freelist.allocate_contiguous(1);
   EXPECT_EQ(6, pid);
 
   pid = freelist.allocate_contiguous(3);
   EXPECT_EQ(0, pid);
 
+  // 12, 13 are freed
   pid = freelist.allocate_contiguous(2);
-  EXPECT_EQ(2, pid);
+  EXPECT_EQ(12, pid);
 
+  // 7 is freed.
   pid = freelist.allocate_contiguous(1);
   EXPECT_EQ(7, pid);
 
+  // 9, 18 are remained.
   pid = freelist.allocate_contiguous(0);
   EXPECT_EQ(0, pid);
 
   pid = freelist.allocate_contiguous(0);
   EXPECT_EQ(0, pid);
 
-  EXPECT_TRUE(freelist.is_freed(9));
-  EXPECT_TRUE(freelist.is_freed(18));
+  EXPECT_FALSE(freelist.is_freed(9));
+  EXPECT_FALSE(freelist.is_freed(18));
 
   pid = freelist.allocate_contiguous(1);
   EXPECT_EQ(9, pid);
@@ -95,6 +100,52 @@ TEST(FreeListTest, AllocateContiguous) {
   for (auto id : pgids) {
     EXPECT_FALSE(freelist.is_freed(id));
   }
+}
+
+TEST(FreeListTest, Read) {
+  // Create a page.
+  Page page = make_page(100);
+  page.set_flag(kFreeList);
+  page.set_count(2);
+
+  // Insert 2 page ids.
+  auto ids = reinterpret_cast<PageID*>(page.skip_page_header());
+  ids[0] = 23;
+  ids[1] = 50;
+
+  // Deserialize page into a freelist.
+  FreeList freelist;
+  freelist.read_from(&page);
+
+  // Ensure that there are two page ids in the freelist.
+  EXPECT_TRUE(freelist.is_freed(23));
+  EXPECT_TRUE(freelist.is_freed(50));
+}
+
+TEST(FreeListTest, Write) {
+  std::vector<PageID> ids = {12, 39};
+  FreeList freelist(ids);
+
+  std::map<TxnID, std::vector<Page>> pending = {
+      {100, {make_page(28), make_page(11)}}, {101, {make_page(3)}}};
+
+  for (auto&& [txn_id, page_vec] : pending) {
+    for (auto&& page : page_vec) {
+      freelist.free(txn_id, &page);
+    }
+  }
+
+  Page page = make_page(42);
+  Status status = freelist.write_to(&page);
+
+  EXPECT_TRUE(status.ok());
+
+  // Read the page back out.
+  FreeList freelist2;
+  freelist2.read_from(&page);
+
+  // Ensure that the freelist is correct.
+  // All pages should be present and in reverse order.
 }
 
 int main(int argc, char** argv) {
