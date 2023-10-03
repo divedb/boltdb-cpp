@@ -15,7 +15,7 @@ std::vector<T> merge_two(const std::vector<T>& v1, const std::vector<T>& v2) {
   return result;
 }
 
-int FreeList::size() const {
+int FreeList::byte_size() const {
   auto n = count();
 
   if (n >= kSpecialCount) {
@@ -141,16 +141,15 @@ bool FreeList::is_pending(TxnID txn_id, PageID pgid) const {
 }
 
 // TODO(gc): do we need to update `pending_`.
-void FreeList::read_from(Page* page) {
-  int count = page->count();
-  Byte* base = page->skip_page_header();
+void FreeList::read_from(const Page& page) {
+  int count = page.count();
+  Byte* base = const_cast<Byte*>(page.skip_page_header());
 
   if (count == kSpecialCount) {
     count = *reinterpret_cast<PageID*>(base);
     base = std::next(base, sizeof(PageID));
   }
 
-  // Copy the list of page ids from the freelist.
   if (count == 0) {
     ids_.clear();
   } else {
@@ -165,23 +164,25 @@ void FreeList::read_from(Page* page) {
   reindex();
 }
 
-Status FreeList::write_to(Page* page) {
+Status FreeList::write_to(Page& out_page) {
   // Update the header flag.
-  page->set_flag(kFreeList);
+  out_page.set_flag(kFreeList);
 
-  // The page.count can only hold up to 64K elements so if we overflow that
-  // number then we handle it by putting the size in the first element.
-
+  // The type of `page.count` is u16.
+  // Hence it can only hold up to 65535 elements.
+  // If we overflow that number then we handle it
+  // by putting the size in the first element.
   // Suppose the page size is 4K and size of PageID is 8,
   // the maximum number of ids is 512 (ignore the page header).
+  // Roughly, 65536 / 512 = 128 overflow pages.
   int n = count();
-  Byte* base = page->skip_page_header();
+  Byte* base = out_page.skip_page_header();
   auto first = reinterpret_cast<PageID*>(base);
 
   if (n < kSpecialCount) {
-    page->set_count(n);
+    out_page.set_count(n);
   } else {
-    page->set_count(kSpecialCount);
+    out_page.set_count(kSpecialCount);
     *first = n;
     first = std::next(first, sizeof(PageID));
   }
@@ -192,7 +193,7 @@ Status FreeList::write_to(Page* page) {
   return {};
 }
 
-void FreeList::reload(Page* page) {
+void FreeList::reload(Page& page) {
   read_from(page);
 
   // Build a cache of only pending pages.

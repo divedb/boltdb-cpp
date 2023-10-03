@@ -115,7 +115,7 @@ TEST(FreeListTest, Read) {
 
   // Deserialize page into a freelist.
   FreeList freelist;
-  freelist.read_from(&page);
+  freelist.read_from(page);
 
   // Ensure that there are two page ids in the freelist.
   EXPECT_TRUE(freelist.is_freed(23));
@@ -136,16 +136,23 @@ TEST(FreeListTest, Write) {
   }
 
   Page page = make_page(42);
-  Status status = freelist.write_to(&page);
+  Status status = freelist.write_to(page);
+
+  page.hexdump(std::cout);
 
   EXPECT_TRUE(status.ok());
 
   // Read the page back out.
-  FreeList freelist2;
-  freelist2.read_from(&page);
+  FreeList new_freelist;
+  new_freelist.read_from(page);
 
   // Ensure that the freelist is correct.
   // All pages should be present and in reverse order.
+  for (auto&& [txn_id, page_vec] : pending) {
+    for (auto&& page : page_vec) {
+      EXPECT_TRUE(new_freelist.is_freed(page.id()));
+    }
+  }
 }
 
 int main(int argc, char** argv) {

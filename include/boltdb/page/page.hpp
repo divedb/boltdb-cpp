@@ -42,18 +42,18 @@ class PageHeader {
 // `meta`, `freelist`, `branch` and `leaf` pages.
 class Page {
  public:
-  Page(PageID pid, PageFlag flag, int page_size);
+  Page(PageID pgid, PageFlag flag, int page_size);
 
   // Accessor.
-  PageFlag flag() const { return pheader_.flag; }
-  u16 count() const { return pheader_.count; }
-  u32 overflow() const { return pheader_.overflow; }
-  PageID id() const { return pheader_.pgid; }
+  PageFlag flag() const { return pheader_->flag; }
+  u16 count() const { return pheader_->count; }
+  u32 overflow() const { return pheader_->overflow; }
+  PageID id() const { return pheader_->pgid; }
 
   // Modifier.
-  void set_flag(PageFlag flag) { pheader_.flag = flag; }
-  void set_count(u16 count) { pheader_.count = count; }
-  void set_overflow(u32 overflow) { pheader_.overflow = overflow; }
+  void set_flag(PageFlag flag) { pheader_->flag = flag; }
+  void set_count(u16 count) { pheader_->count = count; }
+  void set_overflow(u32 overflow) { pheader_->overflow = overflow; }
 
   // Get a human readable page type string used for debugging.
   std::string type() const;
@@ -78,10 +78,12 @@ class Page {
 
   std::span<BranchPageElement> branch_page_elements() const;
 
-  void hexdump(int n) const;
-
+  // Get the raw page data without the page header.
   Byte* skip_page_header();
   const Byte* skip_page_header() const;
+
+  // Hex dump the page content for debug.
+  void hexdump(std::ostream& os) const;
 
  private:
   friend class FreeList;
@@ -89,9 +91,9 @@ class Page {
   template <typename T>
   T* cast_ptr() const;
 
-  PageHeader pheader_;   // Page header
-  ByteSlice pdata_;      // Page data
   const int page_size_;  // Page size
+  PageHeader* pheader_;  // Page header
+  ByteSlice pdata_;      // Page data
 };
 
 // BranchPageElement represents a node on a branch page.

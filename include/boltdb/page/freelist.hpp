@@ -22,7 +22,7 @@ class FreeList {
   FreeList(std::vector<PageID> ids) : ids_(std::move(ids)) {}
 
   // Get the size of the page after serialization in bytes.
-  int size() const;
+  int byte_size() const;
 
   // Get count of pages on the freelist.
   int count() const { return free_count() + pending_count(); }
@@ -60,16 +60,16 @@ class FreeList {
   // Otherwise return false.
   bool is_pending(TxnID txn_id, PageID pgid) const;
 
-  // Initializes the freelist from a freelist page.
-  void read_from(Page* page);
+  // Initializes the freelist from the specified freelist page.
+  void read_from(const Page& in_page);
 
-  // Writes the page ids onto a freelist page. All free and pending ids are
-  // saved to disk since in the event of a program crash, all pending ids will
-  // become free.
-  Status write_to(Page* page);
+  // Writes the page ids onto the specified freelist page.
+  // All free and pending ids are saved to disk since in the event
+  // of a program crash, all pending ids will become free.
+  Status write_to(Page& out_page);
 
   // Reads the freelist from a page and filters out pending items.
-  void reload(Page* page);
+  void reload(Page& page);
 
  private:
   static constexpr const u16 kSpecialCount = 0xFFFF;

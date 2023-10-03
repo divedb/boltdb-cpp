@@ -19,16 +19,16 @@ Byte* advance_n_bytes(const T* p, std::size_t n) {
   return advance_n_bytes(const_cast<T*>(p), n);
 }
 
-Page::Page(PageID pid, PageFlag flag, int page_size)
-    : pheader_(pid, flag), page_size_(page_size) {
+Page::Page(PageID pgid, PageFlag flag, int page_size) : page_size_(page_size) {
   pdata_.reserve(page_size_);
-  binary::BigEndian::append_variadic_uint(pdata_, pheader_.pgid,
-                                          static_cast<u16>(pheader_.flag),
-                                          pheader_.count, pheader_.overflow);
+  binary::BigEndian::append_variadic_uint(pdata_, pgid, static_cast<u16>(flag),
+                                          static_cast<u16>(0),
+                                          static_cast<u32>(0));
+  pheader_ = reinterpret_cast<PageHeader*>(pdata_.data());
 }
 
 std::string Page::type() const {
-  auto flag = pheader_.flag;
+  auto flag = pheader_->flag;
 
   if ((flag & kBranch) != 0) {
     return "branch";
@@ -60,7 +60,7 @@ LeafPageElement* Page::leaf_page_element(u16 index) const {
 std::span<LeafPageElement> Page::leaf_page_elements() const {
   auto base = cast_ptr<LeafPageElement>();
 
-  return {base, pheader_.count};
+  return {base, pheader_->count};
 }
 
 BranchPageElement* Page::branch_page_element(u16 index) const {
@@ -72,20 +72,37 @@ BranchPageElement* Page::branch_page_element(u16 index) const {
 std::span<BranchPageElement> Page::branch_page_elements() const {
   auto base = cast_ptr<BranchPageElement>();
 
-  return {base, pheader_.count};
+  return {base, pheader_->count};
 }
 
-void Page::hexdump(int n) const {
+void Page::hexdump(std::ostream& os) const {
   std::ostringstream oss;
   const Byte* base = skip_page_header();
 
-  // TODO(gc): avoid large n
-  for (int i = 0; i < n; i++) {
-    oss << format("02x", *base);
-    std::advance(base, 1);
+  int i;
+  int step = 0x10;
+  int n = (page_size_ / step) * step;
+  int r = page_size_ % step;
+
+  for (i = 0; i < n; i += step) {
+    oss << format("04x-04x", i, i + step - 1);
+
+    for (int j = 0; j < step; j++) {
+      oss << format("02x", *base++);
+    }
+
+    oss << '\n';
   }
 
-  std::cout << oss.str();
+  for (int j = 0; j < r; j++) {
+    oss << format("02x", *base++);
+  }
+
+  if (r != 0) {
+    oss << '\n';
+  }
+
+  os << oss.str();
 }
 
 // Get base ptr, which excludes the page header.
