@@ -92,9 +92,6 @@ void FreeList::free(TxnID txn_id, const Page& page) {
     pending_[txn_id].push_back(i);
     cache_[i] = true;
   }
-
-  std::cout << "id = " << page.id() << std::endl;
-  std::cout << pending_[txn_id][0] << std::endl;
 }
 
 void FreeList::release(TxnID txn_id) {
@@ -136,14 +133,12 @@ bool FreeList::is_freed(PageID pgid) const {
 }
 
 bool FreeList::is_pending(TxnID txn_id, PageID pgid) const {
-  if (pending_.find(txn_id) == pending_.end()) {
-    return false;
+  if (auto it = pending_.find(txn_id); it != pending_.end()) {
+    auto& pgid_vec = it->second;
+    return std::find(pgid_vec.begin(), pgid_vec.end(), pgid) != pgid_vec.end();
   }
 
-  auto& pgid_vec = pending_.at(txn_id);
-  std::cout << pgid_vec.size() << '\t' << pgid_vec[0] << std::endl;
-
-  return std::find(pgid_vec.begin(), pgid_vec.end(), pgid) != pgid_vec.end();
+  return false;
 }
 
 // TODO(gc): do we need to update `pending_`.
@@ -231,8 +226,8 @@ void FreeList::reindex() {
     cache_[id] = true;
   }
 
-  for (auto&& [_, pgids] : pending_) {
-    for (PageID pgid : pgids) {
+  for (auto&& [_, pgid_vec] : pending_) {
+    for (PageID pgid : pgid_vec) {
       cache_[pgid] = true;
     }
   }
@@ -252,7 +247,7 @@ std::vector<PageID> FreeList::sorted_pending_pgids_impl(
   std::vector<PageID> result;
   auto d_first = std::back_inserter(result);
 
-  for (auto [txn_id, pgid_vec] : pending_) {
+  for (auto&& [txn_id, pgid_vec] : pending_) {
     std::copy_if(pgid_vec.begin(), pgid_vec.end(), d_first,
                  [tid = txn_id, pred](PageID) { return pred(tid); });
   }

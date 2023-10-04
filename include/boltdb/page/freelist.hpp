@@ -87,9 +87,6 @@ class FreeList {
   std::vector<PageID> sorted_pending_pgids_impl(
       const std::function<bool(TxnID)>& pred) const;
 
-  // Merge the specified sorted free page ids into `ids_`.
-  void merge(const std::vector<PageID>& sorted_free_pgids);
-
   // All free and available free page ids.
   std::vector<PageID> ids_;
   // Mapping of soon-to-be free page ids by transaction.

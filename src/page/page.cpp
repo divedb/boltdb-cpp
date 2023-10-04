@@ -21,12 +21,10 @@ Byte* advance_n_bytes(const T* p, std::size_t n) {
 
 Page::Page(PageID pgid, PageFlag flag, int page_size) : page_size_(page_size) {
   pdata_.reserve(page_size_);
-  pdata_ = binary::BigEndian::append_variadic_uint(
+  pdata_ = binary::LittleEndian::append_variadic_uint(
       pdata_, pgid, static_cast<u16>(flag), static_cast<u16>(0),
       static_cast<u32>(0));
   pheader_ = reinterpret_cast<PageHeader*>(pdata_.data());
-
-  std::cout << "what's page id: " << pheader_->pgid << std::endl;
 }
 
 std::string Page::type() const {
