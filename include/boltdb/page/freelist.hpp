@@ -42,8 +42,8 @@ class FreeList {
   PageID allocate_contiguous(int n);
 
   // Release a page and its overflow for a given transaction id.
-  // If the page is already free then a panic will occur.
-  void free(TxnID txn_id, Page* p);
+  // If the page has been freed, then a panic will occur.
+  void free(TxnID txn_id, const Page& page);
 
   // Moves all page ids for a transaction id (or older) to the freelist.
   void release(TxnID txn_id);

@@ -21,10 +21,12 @@ Byte* advance_n_bytes(const T* p, std::size_t n) {
 
 Page::Page(PageID pgid, PageFlag flag, int page_size) : page_size_(page_size) {
   pdata_.reserve(page_size_);
-  binary::BigEndian::append_variadic_uint(pdata_, pgid, static_cast<u16>(flag),
-                                          static_cast<u16>(0),
-                                          static_cast<u32>(0));
+  pdata_ = binary::BigEndian::append_variadic_uint(
+      pdata_, pgid, static_cast<u16>(flag), static_cast<u16>(0),
+      static_cast<u32>(0));
   pheader_ = reinterpret_cast<PageHeader*>(pdata_.data());
+
+  std::cout << "what's page id: " << pheader_->pgid << std::endl;
 }
 
 std::string Page::type() const {
@@ -77,7 +79,7 @@ std::span<BranchPageElement> Page::branch_page_elements() const {
 
 void Page::hexdump(std::ostream& os) const {
   std::ostringstream oss;
-  const Byte* base = skip_page_header();
+  const Byte* base = data();
 
   int i;
   int step = 0x10;
@@ -85,10 +87,10 @@ void Page::hexdump(std::ostream& os) const {
   int r = page_size_ % step;
 
   for (i = 0; i < n; i += step) {
-    oss << format("04x-04x", i, i + step - 1);
+    oss << format("%04x - %04x    ", i, i + step - 1);
 
     for (int j = 0; j < step; j++) {
-      oss << format("02x", *base++);
+      oss << format("%02x ", *base++);
     }
 
     oss << '\n';

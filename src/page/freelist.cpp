@@ -70,18 +70,20 @@ PageID FreeList::allocate_contiguous(int n) {
   return 0;
 }
 
-void FreeList::free(TxnID txn_id, Page* p) {
+void FreeList::free(TxnID txn_id, const Page& page) {
   // TODO(gc): why this is 1, not 2 since we have 2 meta pages and 1 freelist
   // page.
-  auto id = p->id();
+  auto pgid = page.id();
 
-  if (id <= 1) {
-    std::string error = format("cannot free page 0 or 1: %d", id);
+  if (pgid <= 1) {
+    std::string error = format("cannot free page 0 or 1: %d", pgid);
     throw DBException(error);
   }
 
+  u32 overflow = page.overflow();
+
   // Free page and all its overflow pages.
-  for (auto i = id; i <= id + p->overflow(); i++) {
+  for (auto i = pgid; i <= pgid + overflow; i++) {
     if (cache_.find(i) != cache_.end()) {
       std::string error = format("page %d already freed", i);
       throw DBException(error);
@@ -90,6 +92,9 @@ void FreeList::free(TxnID txn_id, Page* p) {
     pending_[txn_id].push_back(i);
     cache_[i] = true;
   }
+
+  std::cout << "id = " << page.id() << std::endl;
+  std::cout << pending_[txn_id][0] << std::endl;
 }
 
 void FreeList::release(TxnID txn_id) {
@@ -135,9 +140,10 @@ bool FreeList::is_pending(TxnID txn_id, PageID pgid) const {
     return false;
   }
 
-  auto& pgids = pending_.at(txn_id);
+  auto& pgid_vec = pending_.at(txn_id);
+  std::cout << pgid_vec.size() << '\t' << pgid_vec[0] << std::endl;
 
-  return std::find(pgids.begin(), pgids.end(), pgid) != pgids.end();
+  return std::find(pgid_vec.begin(), pgid_vec.end(), pgid) != pgid_vec.end();
 }
 
 // TODO(gc): do we need to update `pending_`.
@@ -187,7 +193,8 @@ Status FreeList::write_to(Page& out_page) {
     first = std::next(first, sizeof(PageID));
   }
 
-  std::vector<PageID> pgids = merge_two(ids_, sorted_pending_pgids());
+  auto pending_pgids = sorted_pending_pgids();
+  std::vector<PageID> pgids = merge_two(ids_, pending_pgids);
   std::copy(pgids.begin(), pgids.end(), first);
 
   return {};
@@ -242,14 +249,12 @@ std::vector<PageID> FreeList::sorted_pending_pgids(TxnID txn_id) const {
 
 std::vector<PageID> FreeList::sorted_pending_pgids_impl(
     const std::function<bool(TxnID)>& pred) const {
-  int n = pending_count();
-  std::vector<PageID> result(n);
+  std::vector<PageID> result;
   auto d_first = std::back_inserter(result);
 
-  for (auto [tid, pgid_vec] : pending_) {
-    auto id = tid;
-    d_first = std::copy_if(pgid_vec.begin(), pgid_vec.end(), d_first,
-                           [pred, id](PageID) { return pred(id); });
+  for (auto [txn_id, pgid_vec] : pending_) {
+    std::copy_if(pgid_vec.begin(), pgid_vec.end(), d_first,
+                 [tid = txn_id, pred](PageID) { return pred(tid); });
   }
 
   std::sort(result.begin(), result.end());
