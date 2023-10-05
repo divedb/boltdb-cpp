@@ -37,6 +37,9 @@ TEST(PageTest, Meta) {
   meta->magic = 0x1234;
 }
 
+#include <type_traits>
+using namespace std;
+
 int main(int argc, char** argv) {
   ::testing::InitGoogleTest(&argc, argv);
 

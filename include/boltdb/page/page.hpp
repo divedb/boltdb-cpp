@@ -91,7 +91,7 @@ class Page {
   template <typename T>
   T* cast_ptr() const;
 
-  const int page_size_;  // Page size
+  int page_size_;        // Page size
   PageHeader* pheader_;  // Page header
   ByteSlice pdata_;      // Page data
 };
