@@ -12,7 +12,7 @@ using namespace boltdb;
 
 static Page make_page(PageID pgid) { return {pgid, kFreeList, 4096}; }
 
-vector<PageID> random_pgids(int n) {
+static vector<PageID> random_pgids(int n) {
   vector<PageID> result;
   result.reserve(n);
 
@@ -28,28 +28,26 @@ vector<PageID> random_pgids(int n) {
 }
 
 static void BM_freelist_release(benchmark::State& state) {
-  state.PauseTiming();
   auto size = state.range(0);
-  std::cout << "range = " << size << std::endl;
   vector<PageID> ids = random_pgids(size);
   vector<PageID> pending_ids = random_pgids(ids.size() / 400);
   vector<Page> pending_pages;
   pending_pages.reserve(pending_ids.size());
-  transform(pending_ids.begin(), pending_ids.end(), pending_pages.begin(),
+  transform(pending_ids.begin(), pending_ids.end(),
+            back_inserter(pending_pages),
             [](PageID pgid) { return make_page(pgid); });
 
   TxnID txn_id = 1;
-  state.ResumeTiming();
 
-  // for (auto _ : state) {
-  //   FreeList freelist(ids);
+  for (auto _ : state) {
+    FreeList freelist(ids);
 
-  //   for (auto&& page : pending_pages) {
-  //     freelist.free(txn_id, page);
-  //   }
+    for (auto&& page : pending_pages) {
+      freelist.free(txn_id, page);
+    }
 
-  //   freelist.release(1);
-  // }
+    freelist.release(1);
+  }
 }
 
 BENCHMARK(BM_freelist_release)->RangeMultiplier(10)->Range(10000, 10000000);
