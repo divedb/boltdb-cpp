@@ -1,10 +1,10 @@
-#include "boltdb/storage/node.hpp"
+#include "boltdb/page/node.hpp"
 
 #include <exception>
 #include <utility>
 
+#include "boltdb/page/page.hpp"
 #include "boltdb/storage/bucket.hpp"
-#include "boltdb/storage/page.hpp"
 #include "boltdb/transaction/txn.hpp"
 #include "boltdb/util/exception.hpp"
 #include "boltdb/util/util.hpp"

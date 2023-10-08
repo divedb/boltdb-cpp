@@ -1,14 +1,17 @@
-#ifndef BOLTDB_CPP_STORAGE_BUCKET_HPP_
-#define BOLTDB_CPP_STORAGE_BUCKET_HPP_
+#ifndef BOLTDB_CPP_DB_BUCKET_HPP_
+#define BOLTDB_CPP_DB_BUCKET_HPP_
 
 #include <map>
+#include <memory>
 #include <string>
 
+#include "boltdb/transaction/txn.hpp"
 #include "boltdb/util/common.hpp"
 #include "boltdb/util/types.hpp"
 
 namespace boltdb {
 
+class Cursor;
 class Page;
 class Node;
 class Txn;
@@ -40,7 +43,12 @@ class Bucket {
   // This value can be changed by setting Bucket.FillPercent.
   static constexpr const f32 kDefaultFillPercent = 0.5;
 
+  // Construct a bucket associated with a transaction.
   Bucket(Txn* txn);
+
+  // Get the transaction of the bucket.
+  const Txn* txn() const { return txn_; }
+  Txn* txn() { return txn_; }
 
   // Creates a node from the specified page ID and attaches it to the given
   // parent.
@@ -48,21 +56,29 @@ class Bucket {
   // clean.
   Node* node(PageID pgid, Node* parent);
 
-  const Txn* txn() const { return txn_; }
-  Txn* txn() { return txn_; }
+  // Return the root of the bucket.
+  PageID root() const { return bucket_meta_.root; }
 
-  f64 fill_percent() const { return fill_percent_; }
+  // Return true if the bucket is writable otherwise false.
+  bool is_writable() const { return txn_->is_writable(); }
+
+  // Return a cursor associated with the bucket.
+  // Note that: the cursor is only valid as long as the transaction is open.
+  // Do not use a cursor after the transaction is closed.
+  std::unique_ptr<Cursor> cursor();
+
+    f64 fill_percent() const { return fill_percent_; }
 
   // Get in-memory node, if it exists.
   // Otherwise returns the underlying page.
   std::pair<Page*, Node*> page_node(PageID pgid);
 
  private:
-  BucketMeta bucket_meta_;
+  BucketMeta bucket_meta_{};
   Txn* txn_;  // The associated transaction
   std::map<std::string, Bucket*> sub_buckets_cache_;  // Subbucket cache
-  Page* page_;                                        // Inline page reference
-  Node* root_node_;                     // Materialized node for the root page
+  Page* page_{};                                      // Inline page reference
+  Node* root_node_{};                   // Materialized node for the root page
   std::map<PageID, Node*> node_cache_;  // Node cache
 
   // Sets the threshold for filling nodes when they split. By default,
@@ -76,4 +92,4 @@ class Bucket {
 
 }  // namespace boltdb
 
-#endif  // BOLTDB_CPP_STORAGE_BUCKET_HPP_
+#endif  // BOLTDB_CPP_DB_BUCKET_HPP_

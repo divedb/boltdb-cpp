@@ -5,7 +5,7 @@
 #include <numeric>
 #include <vector>
 
-#include "boltdb/storage/page.hpp"
+#include "boltdb/page/page.hpp"
 #include "boltdb/util/common.hpp"
 #include "boltdb/util/slice.hpp"
 #include "boltdb/util/status.hpp"
@@ -16,10 +16,11 @@ namespace boltdb {
 class Bucket;
 
 // Inode represents an internal node inside of a node.
-// It can be used to point to elements in a page or point to an element which
-// hasn't been added to a page yet.
+// It can be used to point to elements in a page
+// or point to an element which hasn't been added to a page yet.
 // TODO(gc): any alternative to remove this structure?
 struct Inode {
+ public:
   u32 flags;
   PageID pgid;
   ByteSlice key;
@@ -27,14 +28,15 @@ struct Inode {
 };
 
 // Node represents an in-memory, deserialized page.
-// TODO(gc):
-// Q1: why node binds to a bucket. A bucket is a B+ tree?
 class Node {
  public:
+  static constexpr const int kMinLeafKeys = 1;
+  static constexpr const int kMinBranchKeys = 2;
+
   Node(PageID pgid, Bucket* bucket, Node* parent)
       : pgid_(pgid), bucket_(bucket), parent_(parent) {}
 
-  // Get the top-level node this node is attached to.
+  // Return the top-level node this node is attached to.
   Node* root() {
     if (parent_ == nullptr) {
       return this;
@@ -43,13 +45,17 @@ class Node {
     return parent_->root();
   }
 
+  // Return true if this node is leaf, otherwise false.
+  bool is_leaf() const { return is_leaf_; }
+  std::size_t inode_count() const { return inodes_.size(); }
+
   // Get the minimum number of inodes this node should have.
   int min_keys() const {
     if (is_leaf_) {
-      return 1;
+      return kMinLeafKeys;
     }
 
-    return 2;
+    return kMinBranchKeys;
   }
 
   // Get the size of the node after serialization.

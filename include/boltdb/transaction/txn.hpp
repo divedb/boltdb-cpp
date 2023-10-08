@@ -24,8 +24,9 @@ class Page;
 // are using them. A long running read transaction can cause the database to
 // quickly grow.
 
-// TxStats represents statistics about the actions performed by the transaction.
-struct TxStats {
+// TxnStats represents statistics about the actions performed by the
+// transaction.
+struct TxnStats {
  public:
   int page_count{};           // Number of page allocations
   int page_alloc{};           // Total bytes allocated
@@ -41,8 +42,8 @@ struct TxStats {
   Duration write_time{};      // Total time spent on writing to disk
 };
 
-inline TxStats operator+(const TxStats& lhs, const TxStats& rhs) {
-  TxStats result;
+inline TxnStats operator+(const TxnStats& lhs, const TxnStats& rhs) {
+  TxnStats result;
 
 #define ADD(sum, op1, op2, field) (sum).field = (op1).field + (op2).field
 
@@ -67,8 +68,8 @@ inline TxStats operator+(const TxStats& lhs, const TxStats& rhs) {
 // Sub calculates and returns the difference between two sets of transaction
 // stats. This is useful when obtaining stats at two different points and time
 // and you need the performance counters that occurred within that time span.
-inline TxStats operator-(const TxStats& lhs, const TxStats& rhs) {
-  TxStats result;
+inline TxnStats operator-(const TxnStats& lhs, const TxnStats& rhs) {
+  TxnStats result;
 
 #define SUB(diff, op1, op2, field) (diff).field = (op1).field - (op2).field
 
@@ -85,7 +86,7 @@ inline TxStats operator-(const TxStats& lhs, const TxStats& rhs) {
   SUB(result, lhs, rhs, write);
   SUB(result, lhs, rhs, write_time);
 
-#undef ADD
+#undef SUB
 
   return result;
 }
@@ -115,15 +116,18 @@ class Txn {
   // If page has been written to then a temporary buffered page is returned.
   Page* page(PageID pgid);
 
-  TxStats stats{};
+  bool is_writable() const { return writable_; }
 
  private:
+  friend class Bucket;
+
   bool writable_;
   bool managed_;
   DB* db_;
   Meta* meta_;
   Bucket* bucket_;
   std::map<PageID, Page*> pages_;
+  TxnStats stats{};
   std::function<void()> commit_handlers_;
 };
 
