@@ -45,11 +45,10 @@ class Node {
     return parent_->root();
   }
 
-  // Return true if this node is leaf, otherwise false.
+  // Return true if this node is leaf otherwise false.
   bool is_leaf() const { return is_leaf_; }
-  std::size_t inode_count() const { return inodes_.size(); }
 
-  // Get the minimum number of inodes this node should have.
+  // Return the minimum number of inodes this node should have.
   int min_keys() const {
     if (is_leaf_) {
       return kMinLeafKeys;
@@ -58,14 +57,15 @@ class Node {
     return kMinBranchKeys;
   }
 
-  // Get the size of the node after serialization.
-  int size() const;
+  // Return the size of the node after serialization.
+  int byte_size() const;
 
-  // Get true if the node is less than a given size.
+  // Return true if the node is less than the  given size.
   // This is an optimization to avoid calculating a large node when we only need
   // to know if it fits inside a certain page size.
   bool is_size_less_than(int v) const;
 
+  // Return the size of each page element based on the type of node.
   int page_element_size() const {
     if (is_leaf_) {
       return kLeafPageElementSize;
@@ -74,7 +74,7 @@ class Node {
     return kBranchPageElementSize;
   }
 
-  // Get the child node at a given index.
+  // Get the child node at the given index.
   // TODO(gc): why not use children directly
   Node* child_at(int index);
 
@@ -103,8 +103,6 @@ class Node {
 
   // Writes the items onto one or more pages.
   void write(Page* page);
-
-  void append(Node* child) { children_.push_back(child); }
 
  private:
   // Find the first satisfied index such that inodes_[index].key >= key.

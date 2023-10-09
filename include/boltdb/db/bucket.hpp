@@ -50,11 +50,9 @@ class Bucket {
   const Txn* txn() const { return txn_; }
   Txn* txn() { return txn_; }
 
-  // Creates a node from the specified page ID and attaches it to the given
-  // parent.
-  // Don't free this node, the bucket is responsible for keeping the memory
-  // clean.
-  Node* node(PageID pgid, Node* parent);
+  // Find the node based on the specified page id.
+  // Return true if this page has been cached otherwise false.
+  bool node(PageID pgid, Node* parent, Node*& out_node);
 
   // Return the root of the bucket.
   PageID root() const { return bucket_meta_.root; }
@@ -67,7 +65,7 @@ class Bucket {
   // Do not use a cursor after the transaction is closed.
   std::unique_ptr<Cursor> cursor();
 
-    f64 fill_percent() const { return fill_percent_; }
+  f64 fill_percent() const { return fill_percent_; }
 
   // Get in-memory node, if it exists.
   // Otherwise returns the underlying page.

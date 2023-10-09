@@ -14,7 +14,7 @@ namespace boltdb {
 // The size formula is based on:
 // Page Header | Page Element Size1 + Len(key1) + Len(value1) ... Page Element
 // SizeN + Len(keyN) + Len(valueN)
-int Node::size() const {
+int Node::byte_size() const {
   int elsz = page_element_size();
 
   return std::accumulate(inodes_.begin(), inodes_.end(), kPageHeaderSize,
@@ -45,7 +45,12 @@ Node* Node::child_at(int index) {
     throw DBException(err);
   }
 
-  return bucket_->node(inodes_[index].pgid, this);
+  Node* n = nullptr;
+  bool cached = bucket_->node(inodes_[index].pgid, this, &n);
+
+  if (!cached) {
+    inodes_.push_back(n);
+  }
 }
 
 int Node::child_index(const Node* child) const {

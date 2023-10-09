@@ -1,4 +1,4 @@
-#include "boltdb/storage/bucket.hpp"
+#include "boltdb/db/bucket.hpp"
 
 #include "boltdb/page/node.hpp"
 #include "boltdb/transaction/txn.hpp"
@@ -13,19 +13,38 @@ Bucket::Bucket(Txn* txn) : txn_(txn) {
   }
 }
 
-Node* Bucket::node(PageID pgid, Node* parent) {
+bool Bucket::node(PageID pgid, Node* parent, Node*& out_node) {
   // Retrieve node if it's already been created.
-  if (node_cache_.find(pgid) != node_cache_.end()) {
-    return node_cache_[pgid];
+  if (auto iter = node_cache_.find(pgid); iter != node_cache_.end()) {
+    out_node = iter->second;
+
+    return true;
   }
 
+  // Otherwise create a node and cache ite.
   Node* n = new Node(pgid, this, parent);
 
   if (parent == nullptr) {
     root_node_ = n;
-  } else {
-    parent->append(n);
   }
+
+  // Use the inline page if this is an inline bucket.
+  Page* p = page_;
+
+  if (p == nullptr) {
+    p = txn_->page(pgid);
+  }
+
+  // Read the page into the node and cache it.
+  n->read(p);
+  node_cache_[pgid] = n;
+
+  out_node = n;
+
+  // Update statistics.
+  txn_->stats.node_count++;
+
+  return false;
 }
 
 std::unique_ptr<Cursor> Bucket::cursor() {
