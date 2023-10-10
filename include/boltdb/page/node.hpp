@@ -1,8 +1,9 @@
-#ifndef BOLTDB_CPP_STORAGE_NODE_HPP_
-#define BOLTDB_CPP_STORAGE_NODE_HPP_
+#ifndef BOLTDB_CPP_PAGE_NODE_HPP_
+#define BOLTDB_CPP_PAGE_NODE_HPP_
 
 #include <cstdint>
 #include <numeric>
+// #include <variant>
 #include <vector>
 
 #include "boltdb/page/page.hpp"
@@ -25,6 +26,7 @@ struct Inode {
   PageID pgid;
   ByteSlice key;
   ByteSlice value;
+  // std::variant<PageID, ByteSlice> value;
 };
 
 // Node represents an in-memory, deserialized page.
@@ -33,8 +35,7 @@ class Node {
   static constexpr const int kMinLeafKeys = 1;
   static constexpr const int kMinBranchKeys = 2;
 
-  Node(PageID pgid, Bucket* bucket, Node* parent)
-      : pgid_(pgid), bucket_(bucket), parent_(parent) {}
+  Node(PageID pgid, Bucket* bucket, Node* parent) : pgid_(pgid), bucket_(bucket), parent_(parent) {}
 
   // Return the top-level node this node is attached to.
   Node* root() {
@@ -92,29 +93,28 @@ class Node {
 
   // Insert a key/value.
   // TODO(gc): why needs pgid and old_key parameters.
-  void put(ByteSlice old_key, ByteSlice new_key, ByteSlice value, PageID pgid,
-           u32 flags);
+  void put(ByteSlice old_key, ByteSlice new_key, ByteSlice value, PageID pgid, u32 flags);
 
   // Remove a key from the node.
   void remove(ByteSlice key);
 
   // Initializes the node from a page.
-  void read(Page* page);
+  void read(const Page& page);
 
   // Writes the items onto one or more pages.
-  void write(Page* page);
+  void write(Page& page);
 
  private:
   // Find the first satisfied index such that inodes_[index].key >= key.
   int index_of(ByteSlice key);
 
-  // Writes the nodes to dirty pages and splits nodes as it goes.
-  // Return an error if the dirty pages cannot be allocated.
-  Status spill();
-
   // Breaks up a node into multiple smaller nodes, if appropriate.
   // This should only be called from the `spill()` function.
   std::vector<Node*> split(int page_size);
+
+  // Writes the nodes to dirty pages and splits nodes as it goes.
+  // Return an error if the dirty pages cannot be allocated.
+  Status spill();
 
   // Breaks up a node into two smaller nodes, if appropriate.
   // This should only be called from the `split()` function.
@@ -131,11 +131,11 @@ class Node {
   PageID pgid_;
   Bucket* bucket_;
   Node* parent_;
-  ByteSlice key_;
+  ByteSlice first_key_;
   std::vector<Node*> children_;
   std::vector<Inode> inodes_;
 };
 
 }  // namespace boltdb
 
-#endif  // BOLTDB_CPP_STORAGE_NODE_HPP_
+#endif  // BOLTDB_CPP_PAGE_NODE_HPP_

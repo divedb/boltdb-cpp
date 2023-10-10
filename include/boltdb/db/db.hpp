@@ -1,57 +1,22 @@
-#ifndef BOLTDB_CPP_DB_HPP_
-#define BOLTDB_CPP_DB_HPP_
+#ifndef BOLTDB_CPP_DB_DB_HPP_
+#define BOLTDB_CPP_DB_DB_HPP_
 
 #include <fstream>
 #include <memory>
 #include <vector>
 
+#include "boltdb/db/bucket.hpp"
+#include "boltdb/db/db_meta.hpp"
 #include "boltdb/fs/file_system.hpp"
 #include "boltdb/page/page.hpp"
-#include "boltdb/storage/bucket.hpp"
 #include "boltdb/transaction/txn.hpp"
 #include "boltdb/util/common.hpp"
 #include "boltdb/util/options.hpp"
 #include "boltdb/util/status.hpp"
-#include "boltdb/util/types.hpp"
 
 namespace boltdb {
 
 class Txn;
-
-class Meta {
- public:
-  // Serialize the given meta object.
-  static ByteSlice serialize(const Meta& meta);
-
-  // Deserialize meta from the given slice.
-  static Meta deserialize(ByteSlice slice);
-
-  // Write meta information to the specified slice.
-  // This does *include* the checksum field.
-  void write(ByteSlice& slice) const;
-
-  // Compute checksum.
-  u64 sum64() const;
-
-  // Checks the marker bytes and version of the meta page to ensure it matches
-  // this binary.
-  Status validate() const;
-
-  bool equals(const Meta& other) const;
-
-  u32 magic;
-  u32 version;
-  u32 page_size;
-  u32 flags;
-  BucketMeta root;
-  PageID freelist;  // Freelist page id
-  PageID pgid;      // Meta page id
-  TxnID txid;       // Transaction id
-  u64 checksum;
-
- private:
-  void write_aux(ByteSlice& slice) const;
-};
 
 // DB represents a collection of buckets persisted to a file on disk.
 // All data access is performed through transactions which can be obtained
@@ -67,6 +32,8 @@ class DB {
 
   // Represents a marker value to indicate that a file is a Bolt DB.
   constexpr static const u32 kMagic = 0xED0CDAED;
+
+  constexpr static const u16 kSpecialCount = 0xFFFF;
 
   // TODO(gc): fix this and free memory
   ~DB() {}
@@ -118,4 +85,4 @@ Status open_db(std::string path, Options options, DB** out_db);
 
 }  // namespace boltdb
 
-#endif  // BOLTDB_CPP_DB_HPP_
+#endif  // BOLTDB_CPP_DB_DB_HPP_

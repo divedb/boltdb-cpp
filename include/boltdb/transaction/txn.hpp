@@ -4,6 +4,7 @@
 #include <functional>
 #include <map>
 
+#include "boltdb/db/db_meta.hpp"
 #include "boltdb/util/common.hpp"
 #include "boltdb/util/types.hpp"
 
@@ -110,13 +111,18 @@ class Txn {
   // set the flag to syscall.O_DIRECT to avoid trashing the page cache.
   int write_flag;
 
-  Meta* meta() const { return meta_; }
-
   // Get a reference to the page with a given page id.
   // If page has been written to then a temporary buffered page is returned.
   Page* page(PageID pgid);
 
   bool is_writable() const { return writable_; }
+
+  // Provide temporarily to support other classes (Node and etc).
+
+  // Return the page id stored in meta data.
+  PageID meta_page_id() const { return meta_->pgid; }
+
+  TxnStats stats{};
 
  private:
   friend class Bucket;
@@ -127,7 +133,6 @@ class Txn {
   Meta* meta_;
   Bucket* bucket_;
   std::map<PageID, Page*> pages_;
-  TxnStats stats{};
   std::function<void()> commit_handlers_;
 };
 

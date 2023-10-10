@@ -22,6 +22,7 @@ namespace boltdb {
 // The ByteSlice class represents a slice of bytes in memory. It is important to
 // note that this class is not thread-safe. It internally maintains a reference
 // count, which increments when it is copied or assigned.
+// TODO(gc): do SSO like basic_string?
 class ByteSlice {
  public:
   using ValueType = Byte;
@@ -42,15 +43,13 @@ class ByteSlice {
   explicit ByteSlice(const Byte* cstring);
   explicit ByteSlice(const std::string& data);
 
-  ByteSlice(const std::initializer_list<Byte>& data)
-      : ByteSlice(data.begin(), data.end()) {}
+  ByteSlice(const std::initializer_list<Byte>& data) : ByteSlice(data.begin(), data.end()) {}
 
   // Construct the slice with `n` copies of byte `v`.
   ByteSlice(std::size_t n, Byte v = 0);
 
   template <typename InputIter,
-            typename = std::enable_if_t<std::is_same_v<
-                Byte, typename std::iterator_traits<InputIter>::value_type>>>
+            typename = std::enable_if_t<std::is_same_v<Byte, typename std::iterator_traits<InputIter>::value_type>>>
   ByteSlice(InputIter first, InputIter last) {
     auto size = std::distance(first, last);
 
@@ -83,6 +82,7 @@ class ByteSlice {
   int ref_count() const { return ref_count_.count(); }
 
   std::size_t size() const { return std::distance(head_, tail_); }
+  bool is_empty() const { return head_ == tail_; }
 
   // Get a string representation of this byte slice.
   std::string to_string() const;
@@ -126,11 +126,10 @@ class ByteSlice {
     return std::equal(lhs.head_, lhs.tail_, rhs.head_, rhs.tail_);
   }
 
-  friend bool operator!=(const ByteSlice& lhs, const ByteSlice& rhs) {
-    return !(lhs == rhs);
-  }
+  friend bool operator!=(const ByteSlice& lhs, const ByteSlice& rhs) { return !(lhs == rhs); }
 
   // TODO(gc): simd acceleration
+  // do we need to support all the comparison operator
   friend bool operator<(const ByteSlice& lhs, const ByteSlice& rhs) {
     int sz1 = lhs.size();
     int sz2 = rhs.size();
@@ -144,9 +143,7 @@ class ByteSlice {
     return res < 0;
   }
 
-  friend bool operator>=(const ByteSlice& lhs, const ByteSlice& rhs) {
-    return !(lhs < rhs);
-  }
+  friend bool operator>=(const ByteSlice& lhs, const ByteSlice& rhs) { return !(lhs < rhs); }
 
  private:
   void clear();

@@ -3,25 +3,24 @@
 #include <exception>
 #include <utility>
 
+#include "boltdb/db/bucket.hpp"
+#include "boltdb/db/db.hpp"
 #include "boltdb/page/page.hpp"
-#include "boltdb/storage/bucket.hpp"
 #include "boltdb/transaction/txn.hpp"
 #include "boltdb/util/exception.hpp"
 #include "boltdb/util/util.hpp"
 
 namespace boltdb {
 
-// The size formula is based on:
-// Page Header | Page Element Size1 + Len(key1) + Len(value1) ... Page Element
-// SizeN + Len(keyN) + Len(valueN)
+// The byte size is computed as:
+// Page Header | Page Element Size1 + Len(key1) + Len(value1) ...
+//               Page Element SizeN + Len(keyN) + Len(valueN)
 int Node::byte_size() const {
   int elsz = page_element_size();
 
-  return std::accumulate(inodes_.begin(), inodes_.end(), kPageHeaderSize,
-                         [elsz](int init, const Inode& inode) {
-                           return init + elsz + inode.key.size() +
-                                  inode.value.size();
-                         });
+  return std::accumulate(inodes_.begin(), inodes_.end(), kPageHeaderSize, [elsz](int init, const Inode& inode) {
+    return init + elsz + inode.key.size() + inode.value.size();
+  });
 }
 
 bool Node::is_size_less_than(int v) const {
@@ -41,26 +40,27 @@ bool Node::is_size_less_than(int v) const {
 
 Node* Node::child_at(int index) {
   if (is_leaf_) {
-    std::string err = format("invalid child at (%d) on a leaf node", index);
+    std::string err = format("invalid child_at(%d) on a leaf node", index);
     throw DBException(err);
   }
 
   Node* n = nullptr;
-  bool cached = bucket_->node(inodes_[index].pgid, this, &n);
+  bool cached = bucket_->node(inodes_[index].pgid, this, n);
 
   if (!cached) {
-    inodes_.push_back(n);
+    children_.push_back(n);
   }
 }
 
 int Node::child_index(const Node* child) const {
-  auto iter = std::lower_bound(
-      inodes_.begin(), inodes_.end(), child->key_,
-      [](ByteSlice lhs, ByteSlice rhs) { return lhs.bytes_compare(rhs) >= 0; });
+  auto first = inodes_.begin();
+  auto last = inodes_.end();
+  auto iter = std::lower_bound(first, last, child->first_key_, std::less<ByteSlice>{});
 
-  return std::distance(inodes_.begin(), iter);
+  return std::distance(first, iter);
 }
 
+// TODO(gc): will the length of inodes_ and children_ diff?
 int Node::num_children() const { return inodes_.size(); }
 
 Node* Node::next_sibling() const {
@@ -68,13 +68,14 @@ Node* Node::next_sibling() const {
     return nullptr;
   }
 
-  int index = parent_->child_index(this);
+  // Compute next sibling index.
+  int index = parent_->child_index(this) + 1;
 
-  if (index >= parent_->num_children() - 1) {
+  if (index >= parent_->num_children()) {
     return nullptr;
   }
 
-  return parent_->child_at(index + 1);
+  return parent_->child_at(index);
 }
 
 Node* Node::prev_sibling() const {
@@ -82,19 +83,19 @@ Node* Node::prev_sibling() const {
     return nullptr;
   }
 
-  int index = parent_->child_index(this);
+  // Compute previous sibling index.
+  int index = parent_->child_index(this) - 1;
 
-  if (index == 0) {
+  if (index < 0) {
     return nullptr;
   }
 
-  return parent_->child_at(index - 1);
+  return parent_->child_at(index);
 }
 
-void Node::put(ByteSlice old_key, ByteSlice new_key, ByteSlice value,
-               PageID pgid, u32 flags) {
+void Node::put(ByteSlice old_key, ByteSlice new_key, ByteSlice value, PageID pgid, u32 flags) {
   std::string error;
-  PageID high_mark = bucket_->txn()->meta().pgid;
+  PageID high_mark = bucket_->txn()->meta_page_id();
 
   if (pgid >= high_mark) {
     error = format("pgid (%d) above high water mark (%d)", pgid, high_mark);
@@ -102,13 +103,13 @@ void Node::put(ByteSlice old_key, ByteSlice new_key, ByteSlice value,
     throw NodeException(error);
   }
 
-  if (old_key.size() == 0) {
+  if (old_key.is_empty()) {
     error = format("put: zero-length old key");
 
     throw NodeException(error);
   }
 
-  if (new_key.size() == 0) {
+  if (new_key.is_empty()) {
     error = format("put: zero-length new key");
 
     throw NodeException(error);
@@ -117,11 +118,9 @@ void Node::put(ByteSlice old_key, ByteSlice new_key, ByteSlice value,
   // Find insertion index.
   int index = index_of(old_key);
 
-  // Add capacity and shift nodes if we don't have an exact match and need to
-  // insert.
-  auto exact = (!inodes_.empty() && index < inodes_.size() &&
-                inodes_[index].key == old_key);
-  if (!exact) {
+  // Add capacity and shift nodes if we don't have an exact match and need to insert.
+  auto exist = (!inodes_.empty() && index < inodes_.size() && inodes_[index].key == old_key);
+  if (!exist) {
     auto iter = std::next(inodes_.begin(), index);
     inodes_.insert(iter, Inode{});
   }
@@ -149,30 +148,34 @@ void Node::remove(ByteSlice key) {
   unbalanced_ = true;
 }
 
-void Node::read(Page* page) {
-  pgid_ = page->id();
-  is_leaf_ = (page->flag() & PageFlag::kLeaf) != 0;
-  inodes_.reserve(page->count());
+// TODO(gc): value and pgid can't exist at same time, try use variant.
+// page no child page information.
+void Node::read(const Page& page) {
+  u16 count = page.count();
+
+  pgid_ = page.id();
+  is_leaf_ = (page.flag() & PageFlag::kLeaf) != 0;
+
+  // TODO(gc): do we need to clear first?
+  inodes_.reserve(page.count());
 
   if (is_leaf_) {
-    for (int i = 0; i < page->count(); i++) {
-      auto element = page->leaf_page_element(i);
-      inodes_.push_back(Inode{.flags = element->flags(),
-                              .key = element->key(),
-                              .value = element->value()});
+    for (auto i = 0; i < count; i++) {
+      auto element = page.leaf_page_element(i);
+      inodes_.emplace_back(element->flags, static_cast<PageID>(0), element->key(), element->value());
     }
   } else {
-    for (int i = 0; i < page->count(); i++) {
-      auto element = page->branch_page_element(i);
-      inodes_.push_back(Inode{.pgid = element->id(), .key = element->key()});
+    for (auto i = 0; i < count; i++) {
+      auto element = page.branch_page_element(i);
+      inodes_.emplace_back(static_cast<u32>(PageFlag::kInvalid), element->pgid, element->key(), ByteSlice{});
     }
   }
 
   // Save first key so we can find the node in the parent when we spill.
   if (inodes_.size() > 0) {
-    key_ = inodes_[0].key;
+    first_key_ = inodes_[0].key;
 
-    assert(key_.size() > 0);
+    assert(first_key_.size() > 0);
   }
 }
 
@@ -181,12 +184,12 @@ void Node::read(Page* page) {
 // then we need to reallocate the byte array pointer.
 //
 // See: https://github.com/boltdb/bolt/pull/335
-void Node::write(Page* page) {
+void Node::write(Page& page) {
   // Initialize page.
   if (is_leaf_) {
-    page->set_flag(PageFlag::kLeaf);
+    page.set_flag(PageFlag::kLeaf);
   } else {
-    page->set_flag(PageFlag::kBranch);
+    page.set_flag(PageFlag::kBranch);
   }
 
   // TODO(gc): why limit this?
@@ -196,56 +199,55 @@ void Node::write(Page* page) {
   // elements is only 512.
   auto size = inodes_.size();
 
-  if (size >= 0xFFFF) {
-    std::string error =
-        format("inode overflow: %d (pgid=%d)", size, page->id());
+  if (size >= DB::kSpecialCount) {
+    std::string error = format("inode overflow: %d (pgid=%d)", size, page->id());
 
     throw NodeException(error);
   }
 
-  page->set_count(size);
+  page.set_count(size);
 
   // Stop here if there are no items to write.
-  if (page->count() == 0) {
+  if (page.count() == 0) {
     return;
   }
 
   // Loop over each item and write it to the page.
   // 1. Skip page header.
   // 2. Skip page element header.
-  Byte* base = page->data();
-  base = std::next(base, kPageHeaderSize);
+  Byte* base = page.skip_page_header();
   base = std::next(base, inodes_.size() * page_element_size());
 
+  // TODO(gc): add enumeration support.
   if (is_leaf_) {
     for (int i = 0; i < size; i++) {
       auto& inode = inodes_[i];
       auto& key = inode.key;
       auto& val = inode.value;
 
-      auto element = page->leaf_page_element(static_cast<u16>(i));
+      auto element = page.leaf_page_element(static_cast<u16>(i));
       element->pos = std::distance(reinterpret_cast<Byte*>(element), base);
       element->flags = inode.flags;
       element->key_size = key.size();
       element->value_size = val.size();
       base = std::copy(key.data(), std::next(key.data(), key.size()), base);
-      base = std::copy(val.data(), std::next(val.data(), val.size()), base);
     }
   } else {
     for (int i = 0; i < size; i++) {
       auto& inode = inodes_[i];
       auto& key = inode.key;
       auto& val = inode.value;
-      auto element = page->branch_page_element(static_cast<u16>(i));
+      auto element = page.branch_page_element(static_cast<u16>(i));
 
       element->pos = std::distance(reinterpret_cast<Byte*>(element), base);
       element->key_size = inode.key.size();
       element->pgid = inode.pgid;
 
       base = std::copy(key.data(), std::next(key.data(), key.size()), base);
-      base = std::copy(val.data(), std::next(val.data(), val.size()), base);
     }
   }
+
+  // DEBUG only: n.dump()
 }
 
 int Node::index_of(ByteSlice key) {
@@ -254,36 +256,27 @@ int Node::index_of(ByteSlice key) {
   int index = std::distance(inodes_.begin(), iter);
 }
 
-Status Node::spill() {
-  auto txn = bucket_->txn();
+std::vector<Node*> Node::split(int page_size) {
+  std::vector<Node*> nodes;
+  Node* split_node = this;
 
-  if (spilled_) {
-    return {};
-  }
+  while (true) {
+    auto [left, right] = split_node->split_two(page_size);
+    nodes.push_back(left);
 
-  // Spill child nodes first. Child nodes can materialize sibling nodes in the
-  // case of split-merge so we cannot use a range loop. We have to check the
-  // children size on every iteration.
-  std::sort(children_.begin(), children_.end(),
-            [](const Node* lhs, const Node* rhs) {
-              return lhs->inodes_[0].key >= rhs->inodes_[0].key;
-            });
-
-  for (auto&& child : children_) {
-    if (Status status = child->spill(); !status.ok()) {
-      return status;
+    // If we can't split then exit the loop.
+    if (right == nullptr) {
+      break;
     }
+
+    // Continue to split right node.
+    split_node = right;
   }
 
-  // We no longer need the child list because it's only used for spill tracking.
-  // TODO(gc): memory leak
-  children_.clear();
-
-  // Split nodes into appropriate sizes. The first node will always be n.
+  return nodes;
 }
 
-std::vector<Node*> Node::split(int page_size) {}
-
+// TODO(gc): take care of memory leak, should the node freed in the bucket or in this destructor?
 std::pair<Node*, Node*> Node::split_two(int page_size) {
   // Ignore the split if the page doesn't have at least enough nodes for two
   // pages or if the nodes can fit in a single page.
@@ -305,12 +298,12 @@ std::pair<Node*, Node*> Node::split_two(int page_size) {
   // Split node into two separate nodes.
   // If there's no parent then we'll need to create one.
   if (parent_ == nullptr) {
-    parent_ = new Node(0, bucket_, nullptr);
+    parent_ = new Node(PageID{}, bucket_, nullptr);
     parent_->children_.push_back(this);
   }
 
   // Create a new node and add it to the parent.
-  Node* next = new Node(0, bucket_, parent_);
+  Node* next = new Node(PageID{}, bucket_, parent_);
   next->is_leaf_ = is_leaf_;
   parent_->children_.push_back(next);
 
@@ -332,8 +325,8 @@ std::pair<int, int> Node::split_index(int threshold) {
   int i;
   int sz = kPageHeaderSize;
 
-  // Loop until we only have the minimum number of keys required for the second
-  // page.
+  // Loop until we only have the minimum number of keys
+  // required for the second page.
   for (i = 0; i < inodes_.size() - kMinKeysPerPage; i++) {
     auto& inode = inodes_[i];
     int elsize = page_element_size() + inode.key.size() + inode.value.size();
@@ -349,6 +342,33 @@ std::pair<int, int> Node::split_index(int threshold) {
   }
 
   return std::make_pair(i, sz);
+}
+
+Status Node::spill() {
+  auto txn = bucket_->txn();
+
+  if (spilled_) {
+    return {};
+  }
+
+  // Spill child nodes first. Child nodes can materialize sibling nodes in the
+  // case of split-merge so we cannot use a range loop. We have to check the
+  // children size on every iteration.
+  std::sort(children_.begin(), children_.end(),
+            [](const Node* lhs, const Node* rhs) { return lhs->inodes_[0].key < rhs->inodes_[0].key; });
+
+  for (auto&& child : children_) {
+    if (Status status = child->spill(); !status.ok()) {
+      return status;
+    }
+  }
+
+  // We no longer need the child list because it's only used for spill tracking.
+  // TODO(gc): memory leak
+  children_.clear();
+
+  // Split nodes into appropriate sizes. The first node will always be n.
+  auto nodes = split();
 }
 
 }  // namespace boltdb

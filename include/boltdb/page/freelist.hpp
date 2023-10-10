@@ -32,9 +32,8 @@ class FreeList {
 
   // Get count of pending pages.
   int pending_count() const {
-    return std::accumulate(
-        pending_.begin(), pending_.end(), 0,
-        [](int init, const auto& entry) { return init + entry.second.size(); });
+    return std::accumulate(pending_.begin(), pending_.end(), 0,
+                           [](int init, const auto& entry) { return init + entry.second.size(); });
   }
 
   // Get the starting page id of a contiguous list of pages of a given size.
@@ -72,8 +71,6 @@ class FreeList {
   void reload(Page& page);
 
  private:
-  static constexpr const u16 kSpecialCount = 0xFFFF;
-
   // Rebuild the free cache based on available and pending free lists.
   void reindex();
 
@@ -84,8 +81,7 @@ class FreeList {
   // and also older transaction (with smaller transaction ids).
   std::vector<PageID> sorted_pending_pgids(TxnID txn_id) const;
 
-  std::vector<PageID> sorted_pending_pgids_impl(
-      const std::function<bool(TxnID)>& pred) const;
+  std::vector<PageID> sorted_pending_pgids_impl(const std::function<bool(TxnID)>& pred) const;
 
   // All free and available free page ids.
   std::vector<PageID> ids_;

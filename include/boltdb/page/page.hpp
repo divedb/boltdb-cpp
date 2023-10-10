@@ -14,12 +14,7 @@ namespace boltdb {
 
 class FreeList;
 
-enum PageFlag : u16 {
-  kBranch = 0x01,
-  kLeaf = 0x02,
-  kMeta = 0x04,
-  kFreeList = 0x08
-};
+enum PageFlag : u16 { kInvalid = 0x00, kBranch = 0x01, kLeaf = 0x02, kMeta = 0x04, kFreeList = 0x08 };
 
 enum LeafFlag : u16 { kBucket = 0x01 };
 
@@ -99,8 +94,7 @@ class Page {
 // BranchPageElement represents a node on a branch page.
 class BranchPageElement {
  public:
-  BranchPageElement(u32 pos, u32 key_size, PageID pgid)
-      : pos(pos), key_size(key_size), pgid(pgid) {}
+  BranchPageElement(u32 pos, u32 key_size, PageID pgid) : pos(pos), key_size(key_size), pgid(pgid) {}
 
   // Get a byte slice of the node key.
   ByteSlice key() const;
