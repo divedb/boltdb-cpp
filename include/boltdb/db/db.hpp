@@ -8,6 +8,7 @@
 #include "boltdb/db/bucket.hpp"
 #include "boltdb/db/db_meta.hpp"
 #include "boltdb/fs/file_system.hpp"
+#include "boltdb/page/freelist.hpp"
 #include "boltdb/page/page.hpp"
 #include "boltdb/transaction/txn.hpp"
 #include "boltdb/util/common.hpp"
@@ -54,6 +55,13 @@ class DB {
 
   friend Status open_db(std::string path, Options options, DB** out_db);
 
+  // TODO(gc): add these methods temporarily.
+  int page_size() const { return page_size_; }
+  void free(TxnID txn_id, const Page& page) { freelist.free(txn_id, page); }
+
+  // Return a contigous block of memory starting at a given page.
+  Status allocate(int count, Page*& out_page);
+
  private:
   DB(std::unique_ptr<FileHandle> file_handle, Options options)
       : file_handle_(std::move(file_handle)), options_(options) {}
@@ -77,6 +85,7 @@ class DB {
   bool opened_;
   Txn* rwtx_;
   std::vector<Txn*> txns_;
+  FreeList freelist;
 };
 
 // Open a database at the specified path.

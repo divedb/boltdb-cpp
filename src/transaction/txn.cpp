@@ -8,7 +8,9 @@ Page* Txn::page(PageID pgid) {
   }
 
   // Otherwise return directly from the mmap.
-  return db_.page(pgid);
+  return db_->page(pgid);
 }
+
+Status Txn::allocate(int count, Page*& out_page) {}
 
 }  // namespace boltdb

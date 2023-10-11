@@ -368,7 +368,16 @@ Status Node::spill() {
   children_.clear();
 
   // Split nodes into appropriate sizes. The first node will always be n.
-  auto nodes = split();
+  int page_size = txn->page_size();
+  auto nodes = split(page_size);
+
+  for (auto node : nodes) {
+    // Add node's page to the freelist if it's not new.
+    if (node->pgid_ > 0) {
+      txn->free(node->pgid_);
+      node->pgid_ = 0;
+    }
+  }
 }
 
 }  // namespace boltdb

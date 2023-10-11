@@ -124,6 +124,13 @@ class Txn {
 
   TxnStats stats{};
 
+  // TODO(gc): add these methods temporarily.
+  int page_size() const { return db_->page_size(); }
+  void free(PageID pgid) { db_->free(meta_->txid, *page(pgid)); }
+
+  // Returns a contigous block of memory starting at a given page.
+  Status allocate(int count, Page*& out_page);
+
  private:
   friend class Bucket;
 
